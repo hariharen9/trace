@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Search, Plus, Radio, MapPin, Activity, Plane, BookOpen, BarChart3 } from 'lucide-react';
+import { Search, Plus, LogOut, Radio, MapPin, Activity, Plane, BookOpen, BarChart3 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { INLINE_SUGGESTIONS } from '../data';
 import PlacesPanel from './panels/PlacesPanel';
 import TimelinePanel from './panels/TimelinePanel';
@@ -20,6 +21,7 @@ const PANELS = { places: PlacesPanel, timeline: TimelinePanel, trips: TripsPanel
 
 export default function Sidebar() {
   const { activeTab, switchTab, openAddModal, showToast, flyTo } = useApp();
+  const { user, signOut } = useAuth();
   const [searchValue, setSearchValue] = useState('');
   const [showInline, setShowInline] = useState(false);
   const [inlineResults, setInlineResults] = useState([]);
@@ -72,14 +74,30 @@ export default function Sidebar() {
           <button onClick={() => openAddModal()} className="w-9 h-9 rounded-lg bg-elevated border border-b1 text-t3 flex items-center justify-center cursor-pointer transition-all duration-200 hover:border-b2 hover:text-t1 shrink-0" title="New place">
             <Plus size={16} strokeWidth={2.2} />
           </button>
-          <button onClick={() => showToast('⚙️ Settings coming soon')} className="w-9 h-9 rounded-lg bg-elevated border border-b1 text-t3 flex items-center justify-center cursor-pointer transition-all duration-200 hover:border-b2 hover:text-t1 shrink-0" title="Settings">
-            <Radio size={16} strokeWidth={2} />
+          <button onClick={signOut} className="w-9 h-9 rounded-lg bg-elevated border border-b1 text-t3 flex items-center justify-center cursor-pointer transition-all duration-200 hover:border-b2 hover:text-rose shrink-0" title="Sign out">
+            <LogOut size={15} strokeWidth={2} />
           </button>
         </div>
       </div>
 
+      {/* ── User info ── */}
+      {user && (
+        <div className="flex items-center gap-3 mx-6 mt-4 py-2.5 px-3.5 rounded-xl bg-elevated border border-b1">
+          <img
+            src={user.photoURL}
+            alt=""
+            className="w-7 h-7 rounded-full shrink-0 border border-b2"
+            referrerPolicy="no-referrer"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-medium text-t1 truncate">{user.displayName}</div>
+            <div className="text-[10px] text-t3 truncate">{user.email}</div>
+          </div>
+        </div>
+      )}
+
       {/* ── Command input ── */}
-      <div className="inline-search-area px-6 pt-5 pb-4 relative">
+      <div className="inline-search-area px-6 pt-4 pb-4 relative">
         <Search size={15} className="absolute left-9 top-1/2 -translate-y-1/2 text-t3 pointer-events-none" />
         <input
           className="w-full bg-elevated border border-b1 rounded-full py-2.5 pr-16 pl-10 text-t1 font-body text-sm outline-none transition-all duration-200 focus:border-ba focus:shadow-[0_0_0_3px_var(--color-pglow)] placeholder:text-t3"

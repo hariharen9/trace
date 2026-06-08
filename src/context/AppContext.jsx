@@ -1,5 +1,8 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import L from 'leaflet';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from './AuthContext';
 import { DEMO_PLACES, MAP_FILTERS } from '../data';
 
 const AppContext = createContext(null);
@@ -39,9 +42,11 @@ function addMarkerToMap(map, place, glow = false) {
 
 /* ── Provider ── */
 export function AppProvider({ children }) {
+  const { user } = useAuth();
   const mapRef = useRef(null);
   const userMarkerRef = useRef(null);
   const tempPinRef = useRef(null);
+  const savedMarkersRef = useRef([]);
 
   const [activeTab, setActiveTab] = useState('places');
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -52,14 +57,42 @@ export function AppProvider({ children }) {
   const [satOn, setSatOn] = useState(false);
   const [onboardVisible, setOnboardVisible] = useState(true);
   const [toasts, setToasts] = useState([]);
-  const [savedPlaces, setSavedPlaces] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('trace_places') || '[]'); } catch { return []; }
-  });
+  const [savedPlaces, setSavedPlaces] = useState([]);
+  const [placesLoading, setPlacesLoading] = useState(true);
 
-  // ── Sync saved places to localStorage ──
+  // ── Firestore real-time sync ──
   useEffect(() => {
-    localStorage.setItem('trace_places', JSON.stringify(savedPlaces));
-  }, [savedPlaces]);
+    if (!user) {
+      setSavedPlaces([]);
+      setPlacesLoading(false);
+      return;
+    }
+
+    const placesRef = collection(db, 'users', user.uid, 'places');
+    const unsubscribe = onSnapshot(placesRef, (snapshot) => {
+      const places = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setSavedPlaces(places);
+      setPlacesLoading(false);
+
+      // Update markers on map
+      const map = mapRef.current;
+      if (map) {
+        // Remove old saved markers
+        savedMarkersRef.current.forEach((m) => map.removeLayer(m));
+        savedMarkersRef.current = [];
+        // Add new ones
+        places.forEach((p) => {
+          const m = addMarkerToMap(map, p);
+          savedMarkersRef.current.push(m);
+        });
+      }
+    }, (err) => {
+      console.error('Firestore sync error:', err);
+      setPlacesLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   // ── Core actions ──
   const flyTo = useCallback((lat, lng, zoom = 16) => {
@@ -110,20 +143,43 @@ export function AppProvider({ children }) {
     });
   }, [changeMapStyle]);
 
-  // ── Add place ──
-  const addPlace = useCallback((place) => {
+  // ── Add place (Firestore) ──
+  const addPlace = useCallback(async (place) => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !user) return;
     const ll = ctxLatLng || map.getCenter();
-    const newPlace = { ...place, lat: ll.lat, lng: ll.lng, id: Date.now() };
-    const m = addMarkerToMap(map, newPlace, true);
-    m.openPopup();
-    map.flyTo([ll.lat, ll.lng], 16, { duration: 0.8 });
-    setSavedPlaces(prev => [...prev, newPlace]);
-    setCtxLatLng(null);
-    closeAddModal();
-    showToast(`${newPlace.emoji} "${newPlace.name}" saved`, 'ok');
-  }, [ctxLatLng, closeAddModal, showToast]);
+
+    const newPlace = {
+      ...place,
+      lat: ll.lat,
+      lng: ll.lng,
+      createdAt: serverTimestamp(),
+    };
+
+    try {
+      const placesRef = collection(db, 'users', user.uid, 'places');
+      await addDoc(placesRef, newPlace);
+      map.flyTo([ll.lat, ll.lng], 16, { duration: 0.8 });
+      setCtxLatLng(null);
+      closeAddModal();
+      showToast(`${newPlace.emoji} "${newPlace.name}" saved`, 'ok');
+    } catch (err) {
+      console.error('Error saving place:', err);
+      showToast('❌ Failed to save place');
+    }
+  }, [user, ctxLatLng, closeAddModal, showToast]);
+
+  // ── Delete place (Firestore) ──
+  const deletePlace = useCallback(async (placeId) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'places', placeId));
+      showToast('🗑️ Place removed', 'ok');
+    } catch (err) {
+      console.error('Error deleting place:', err);
+      showToast('❌ Failed to delete');
+    }
+  }, [user, showToast]);
 
   // ── Map actions ──
   const dropPin = useCallback((latlng) => {
@@ -224,9 +280,14 @@ export function AppProvider({ children }) {
     if (p.get('tab')) setActiveTab(p.get('tab'));
   }, [openAddModal, openAIModal]);
 
-  // ── Init map markers ──
+  // ── Init map markers (demo places only — saved places handled by Firestore listener) ──
   const initMarkers = useCallback((map) => {
-    [...DEMO_PLACES, ...savedPlaces].forEach(p => addMarkerToMap(map, p));
+    DEMO_PLACES.forEach(p => addMarkerToMap(map, p));
+    // Also render any already-loaded saved places
+    savedPlaces.forEach(p => {
+      const m = addMarkerToMap(map, p);
+      savedMarkersRef.current.push(m);
+    });
   }, [savedPlaces]);
 
   const value = {
@@ -237,7 +298,7 @@ export function AppProvider({ children }) {
     mapStyle, changeMapStyle, satOn, toggleSatellite,
     onboardVisible, setOnboardVisible,
     toasts, showToast,
-    savedPlaces, addPlace,
+    savedPlaces, placesLoading, addPlace, deletePlace,
     flyTo, locateMe, dropPin, navigateTo, copyCoords,
     applyMapFilter, initMarkers,
   };

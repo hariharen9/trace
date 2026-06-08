@@ -1,4 +1,6 @@
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { AppProvider } from './context/AppContext'
+import LoginScreen from './components/LoginScreen'
 import Sidebar from './components/Sidebar'
 import MapView from './components/MapView'
 import FloatingControls from './components/FloatingControls'
@@ -7,7 +9,31 @@ import AISearchModal from './components/AISearchModal'
 import ContextMenu from './components/ContextMenu'
 import ToastContainer from './components/ToastContainer'
 
-export default function App() {
+function AppContent() {
+  const { user, loading } = useAuth();
+
+  // ── Loading state ──
+  if (loading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center"
+        style={{ background: 'var(--color-void)' }}>
+        <div className="flex items-center gap-3">
+          <span className="w-3 h-3 rounded-full bg-primary animate-pulse-dot"
+            style={{ boxShadow: '0 0 14px var(--color-primary)' }} />
+          <span className="font-display text-xl font-bold tracking-[-0.04em] text-t2">
+            TRACE
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Not authenticated ──
+  if (!user) {
+    return <LoginScreen />;
+  }
+
+  // ── Authenticated ──
   return (
     <AppProvider>
       <div className="app-layout flex w-full h-full relative overflow-hidden">
@@ -22,5 +48,13 @@ export default function App() {
       <ContextMenu />
       <ToastContainer />
     </AppProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
