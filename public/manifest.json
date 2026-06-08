@@ -1,0 +1,40 @@
+{
+  "name": "TRACE — Trace your life",
+  "short_name": "TRACE",
+  "description": "A personal location operating system. Timeline, collections, AI search, travel planning.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07070d",
+  "theme_color": "#07070d",
+  "categories": ["navigation", "travel", "lifestyle"],
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Place",
+      "short_name": "Add",
+      "description": "Save a new location",
+      "url": "/?action=add"
+    },
+    {
+      "name": "Timeline",
+      "short_name": "Timeline",
+      "description": "View your location history",
+      "url": "/?tab=timeline"
+    },
+    {
+      "name": "AI Search",
+      "short_name": "Search",
+      "description": "Natural language place search",
+      "url": "/?action=search"
+    }
+  ],
+  "prefer_related_applications": false
+}

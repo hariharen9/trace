@@ -1,0 +1,55 @@
+{
+  "name": "Mapz — Your Location OS",
+  "short_name": "Mapz",
+  "description": "A personal location operating system. Timeline, collections, AI search, travel planning.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07070d",
+  "theme_color": "#07070d",
+  "categories": ["navigation", "travel", "lifestyle"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Place",
+      "short_name": "Add",
+      "description": "Save a new location",
+      "url": "/?action=add",
+      "icons": [{ "src": "icons/icon-add.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Timeline",
+      "short_name": "Timeline",
+      "description": "View your location history",
+      "url": "/?tab=timeline"
+    },
+    {
+      "name": "AI Search",
+      "short_name": "Search",
+      "description": "Natural language place search",
+      "url": "/?action=search"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/main.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "label": "Mapz main interface"
+    }
+  ],
+  "prefer_related_applications": false
+}

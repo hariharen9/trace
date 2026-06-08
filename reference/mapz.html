@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#07070d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Mapz — Your Location OS</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  --void:#07070d; --base:#0d0d18; --layer:#12121f; --surface:#18182a; --elevated:#1e1e32;
+  --glass:rgba(12,12,22,0.88); --glass2:rgba(24,24,42,0.72);
+  --p:#6c63ff; --p2:#a78bfa; --pglow:rgba(108,99,255,0.22);
+  --amber:#f59e0b; --teal:#14b8a6; --coral:#f97316; --mint:#10b981; --rose:#f43f5e;
+  --t1:#f0eeff; --t2:#9896b8; --t3:#52516b; --ta:#a78bfa;
+  --b1:rgba(255,255,255,0.06); --b2:rgba(255,255,255,0.11); --ba:rgba(108,99,255,0.32);
+  --r1:8px; --r2:12px; --r3:16px; --r4:22px; --pill:100px;
+  --fd:'Syne',sans-serif; --fb:'DM Sans',sans-serif; --fm:'JetBrains Mono',monospace;
+  --sw:340px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--void);color:var(--t1);font-family:var(--fb);font-size:14px;-webkit-font-smoothing:antialiased}
+
+/* ── LAYOUT ── */
+#app{display:flex;width:100%;height:100%;position:relative;overflow:hidden}
+#map-wrap{flex:1;height:100%;position:relative}
+#map{width:100%;height:100%;background:var(--void)}
+.leaflet-container{background:var(--void)!important}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:var(--sw);height:100%;flex-shrink:0;
+  background:var(--glass);backdrop-filter:blur(28px) saturate(1.5);-webkit-backdrop-filter:blur(28px) saturate(1.5);
+  border-right:1px solid var(--b1);display:flex;flex-direction:column;z-index:10;position:relative
+}
+.drag-handle{width:36px;height:4px;border-radius:2px;background:var(--b2);margin:8px auto 0;display:none}
+
+/* ── LOGO BAR ── */
+.logo-bar{padding:18px 18px 0;display:flex;align-items:center;justify-content:space-between}
+.wordmark{font-family:var(--fd);font-size:21px;font-weight:800;letter-spacing:-.04em;display:flex;align-items:center;gap:6px}
+.wordmark .dot{width:8px;height:8px;border-radius:50%;background:var(--p);box-shadow:0 0 10px var(--p);animation:pdot 2s ease-in-out infinite}
+@keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.8)}}
+.logo-actions{display:flex;gap:6px}
+.icon-btn{width:33px;height:33px;border-radius:var(--r2);background:var(--elevated);border:1px solid var(--b1);color:var(--t3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;flex-shrink:0}
+.icon-btn:hover{border-color:var(--b2);color:var(--t1)}
+
+/* ── COMMAND INPUT ── */
+.cmd-wrap{padding:12px 16px 10px;position:relative}
+.cmd-input{width:100%;background:var(--elevated);border:1px solid var(--b1);border-radius:var(--pill);padding:10px 64px 10px 38px;color:var(--t1);font-family:var(--fb);font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s}
+.cmd-input::placeholder{color:var(--t3)}
+.cmd-input:focus{border-color:var(--ba);box-shadow:0 0 0 3px var(--pglow)}
+.cmd-search-icon{position:absolute;left:28px;top:50%;transform:translateY(-50%);color:var(--t3);pointer-events:none}
+.cmd-ai-badge{position:absolute;right:26px;top:50%;transform:translateY(-50%);background:linear-gradient(135deg,var(--p),var(--p2));border-radius:var(--pill);padding:2px 8px;font-size:10px;font-weight:600;letter-spacing:.05em;color:#fff;pointer-events:none}
+#ai-results{position:absolute;top:56px;left:0;right:0;background:var(--layer);border:1px solid var(--ba);border-radius:var(--r3);padding:8px;z-index:400;display:none;box-shadow:0 16px 48px rgba(0,0,0,.55)}
+#ai-results.show{display:block}
+.ai-result-item{padding:8px 10px;border-radius:var(--r2);cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:10px}
+.ai-result-item:hover{background:var(--elevated)}
+.ai-result-emoji{font-size:16px}
+.ai-result-text{flex:1}
+.ai-result-name{font-size:13px;color:var(--t1);font-weight:500}
+.ai-result-sub{font-size:11px;color:var(--t3)}
+.ai-result-dist{font-family:var(--fm);font-size:10px;color:var(--teal)}
+.ai-thinking{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:12px;color:var(--t3)}
+.ai-thinking-dots span{display:inline-block;width:4px;height:4px;background:var(--p);border-radius:50%;animation:bounce .9s infinite;margin:0 1px}
+.ai-thinking-dots span:nth-child(2){animation-delay:.15s}
+.ai-thinking-dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+
+/* ── TABS ── */
+.nav-tabs{display:flex;padding:0 14px;gap:2px;border-bottom:1px solid var(--b1)}
+.nav-tab{flex:1;padding:9px 4px 11px;background:none;border:none;color:var(--t3);font-family:var(--fb);font-size:10px;font-weight:500;letter-spacing:.02em;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .2s;border-bottom:2px solid transparent;margin-bottom:-1px}
+.nav-tab.active{color:var(--ta);border-bottom-color:var(--p)}
+.nav-tab:hover:not(.active){color:var(--t2)}
+
+/* ── PANEL ── */
+.panel-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 13px 20px;scrollbar-width:thin;scrollbar-color:var(--b1) transparent}
+.panel-section{display:none}
+.panel-section.active{display:block}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:var(--b1);border-radius:3px}
+
+/* ── SECTION LABEL ── */
+.slabel{font-family:var(--fm);font-size:10px;font-weight:500;letter-spacing:.12em;color:var(--t3);text-transform:uppercase;margin:14px 2px 8px}
+.slabel:first-child{margin-top:4px}
+
+/* ── PLACE CARD ── */
+.pcard{background:var(--elevated);border:1px solid var(--b1);border-radius:var(--r3);padding:13px;margin-bottom:7px;cursor:pointer;transition:border-color .2s,transform .15s,background .2s;position:relative;overflow:hidden;animation:fsi .3s ease both}
+.pcard::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 55%,rgba(108,99,255,.04));pointer-events:none;border-radius:inherit}
+.pcard:hover{border-color:var(--b2);background:var(--surface);transform:translateY(-1px)}
+.pcard.pinned{border-color:var(--ba)}
+.pcard-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:7px}
+.pcard-emoji{width:36px;height:36px;background:var(--layer);border-radius:var(--r2);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;border:1px solid var(--b1)}
+.pcard-meta{flex:1;min-width:0}
+.pcard-name{font-family:var(--fd);font-size:13.5px;font-weight:600;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard-addr{font-size:11px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pbadge{font-size:10px;font-weight:600;padding:3px 8px;border-radius:var(--pill);flex-shrink:0;letter-spacing:.04em}
+.bc{background:rgba(245,158,11,.14);color:var(--amber)}
+.bf{background:rgba(249,115,22,.14);color:var(--coral)}
+.bm{background:rgba(108,99,255,.14);color:var(--p2)}
+.bw{background:rgba(20,184,166,.14);color:var(--teal)}
+.bp{background:rgba(244,63,94,.14);color:var(--rose)}
+.pcard-note{font-size:12px;color:var(--t2);line-height:1.5;font-style:italic}
+.pcard-footer{display:flex;align-items:center;justify-content:space-between;margin-top:9px;padding-top:8px;border-top:1px solid var(--b1)}
+.pcard-time{font-family:var(--fm);font-size:10px;color:var(--t3)}
+.ptags{display:flex;gap:4px}
+.ptag{font-size:10px;color:var(--t3);background:var(--layer);border:1px solid var(--b1);padding:2px 7px;border-radius:var(--pill)}
+
+/* ── COLLECTION ── */
+.coll-item{display:flex;align-items:center;gap:11px;padding:12px;background:var(--elevated);border:1px solid var(--b1);border-radius:var(--r3);margin-bottom:7px;cursor:pointer;transition:all .2s;animation:fsi .3s ease both}
+.coll-item:hover{border-color:var(--b2);transform:translateX(2px)}
+.coll-icon{width:40px;height:40px;border-radius:var(--r2);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.coll-name{font-weight:600;font-size:13px;margin-bottom:2px}
+.coll-count{font-size:11px;color:var(--t3)}
+
+/* ── TIMELINE ── */
+.tl-item{display:flex;gap:12px;padding:10px 0;position:relative;animation:fsi .3s ease both}
+.tl-item+.tl-item::before{content:'';position:absolute;left:19px;top:0;width:1px;height:100%;background:var(--b1);pointer-events:none}
+.tl-dot{width:38px;height:38px;border-radius:50%;background:var(--elevated);border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;position:relative;z-index:2}
+.tl-dot.hi{background:var(--pglow);border-color:var(--ba);box-shadow:0 0 14px var(--pglow)}
+.tl-body{flex:1;padding-top:4px}
+.tl-title{font-family:var(--fd);font-size:13px;font-weight:600;margin-bottom:2px}
+.tl-sub{font-size:11px;color:var(--t3);margin-bottom:4px}
+.tl-mood{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--t2);background:var(--layer);padding:2px 8px;border-radius:var(--pill);border:1px solid var(--b1)}
+
+/* ── TRIPS ── */
+.trip-card{background:var(--elevated);border:1px solid var(--b1);border-radius:var(--r4);overflow:hidden;margin-bottom:10px;cursor:pointer;transition:border-color .2s,transform .15s;animation:fsi .3s ease both}
+.trip-card:hover{border-color:var(--ba);transform:translateY(-2px)}
+.trip-header{padding:15px;display:flex;align-items:flex-start;gap:10px}
+.trip-flag{font-size:27px}
+.trip-name{font-family:var(--fd);font-size:15px;font-weight:700;margin-bottom:2px}
+.trip-date{font-size:11px;color:var(--t3);font-family:var(--fm)}
+.trip-status{font-size:10px;font-weight:600;padding:4px 10px;border-radius:var(--pill);letter-spacing:.05em}
+.sp{background:rgba(108,99,255,.14);color:var(--p2)}
+.sd{background:rgba(16,185,129,.14);color:var(--mint)}
+.trip-days{padding:0 14px 13px;display:flex;flex-direction:column;gap:4px}
+.trip-day{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--layer);border-radius:var(--r2);font-size:12px;color:var(--t2)}
+.trip-day-num{font-family:var(--fm);font-size:10px;color:var(--p);min-width:30px;font-weight:500}
+.trip-day-spots{margin-left:auto;font-size:10px;color:var(--t3)}
+
+/* ── JOURNAL ── */
+.jcard{background:var(--elevated);border:1px solid var(--b1);border-radius:var(--r4);padding:15px;margin-bottom:10px;cursor:pointer;transition:border-color .2s;animation:fsi .3s ease both}
+.jcard:hover{border-color:var(--b2)}
+.jcard-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.jdate{background:var(--pglow);border:1px solid var(--ba);border-radius:var(--r2);padding:5px 9px;text-align:center;flex-shrink:0}
+.jday{font-family:var(--fd);font-size:21px;font-weight:800;color:var(--ta);line-height:1}
+.jmonth{font-family:var(--fm);font-size:9px;letter-spacing:.1em;color:var(--t3);text-transform:uppercase}
+.jtitle{font-family:var(--fd);font-size:14px;font-weight:700;margin-bottom:2px}
+.jloc{font-size:11px;color:var(--t3)}
+.jbody{font-size:12px;color:var(--t2);line-height:1.7}
+
+/* ── STATS ── */
+.stats-hero{background:var(--elevated);border:1px solid var(--b1);border-radius:var(--r4);padding:20px;margin-bottom:10px;text-align:center;position:relative;overflow:hidden}
+.stats-hero::after{content:'';position:absolute;width:200px;height:200px;border-radius:50%;background:var(--pglow);top:-80px;right:-60px;pointer-events:none}
+.stats-big{font-family:var(--fd);font-size:54px;font-weight:800;line-height:1;background:linear-gradient(135deg,var(--t1),var(--ta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px}
+.stats-label{font-size:10px;color:var(--t3);letter-spacing:.08em;text-transform:uppercase;font-family:var(--fm)}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.scard{background:var(--elevated);border:1px solid var(--b1);border-radius:var(--r3);padding:13px 15px;transition:border-color .2s}
+.scard:hover{border-color:var(--b2)}
+.scard-num{font-family:var(--fd);font-size:26px;font-weight:700;line-height:1;margin-bottom:3px}
+.scard-lbl{font-size:11px;color:var(--t3)}
+.sa .scard-num{color:var(--amber)}.st .scard-num{color:var(--teal)}.sc .scard-num{color:var(--coral)}.sr .scard-num{color:var(--rose)}
+.spark-wrap{background:var(--elevated);border:1px solid var(--b1);border-radius:var(--r3);padding:13px 15px;margin-bottom:8px}
+.spark-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.spark-title{font-size:12px;color:var(--t3)}
+.spark-val{font-family:var(--fd);font-size:19px;font-weight:700}
+canvas.spark{width:100%;height:48px;display:block}
+.hmap-wrap{background:var(--elevated);border:1px solid var(--b1);border-radius:var(--r3);padding:13px 15px;margin-bottom:8px}
+.hmap-grid{display:flex;gap:3px;margin-top:8px;flex-wrap:wrap}
+.hcell{width:11px;height:11px;border-radius:2px;background:var(--layer)}
+.hcell.l1{background:rgba(108,99,255,.2)}.hcell.l2{background:rgba(108,99,255,.42)}.hcell.l3{background:rgba(108,99,255,.65)}.hcell.l4{background:rgba(108,99,255,.9)}
+.wrapped-card{background:linear-gradient(135deg,rgba(108,99,255,.11),rgba(167,139,250,.05));border:1px solid var(--ba);border-radius:var(--r4);padding:17px;margin-bottom:8px}
+.wrapped-title{font-family:var(--fd);font-size:13px;font-weight:700;color:var(--ta);margin-bottom:11px;letter-spacing:.02em}
+.wrapped-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:3px 0}
+.wrapped-row span:first-child{color:var(--t2)}
+.wrapped-row span:last-child{color:var(--t1);font-weight:600}
+.kbd-card{background:var(--elevated);border:1px solid var(--b1);border-radius:var(--r3);padding:13px;margin-bottom:8px}
+.kbd-title{font-family:var(--fm);font-size:10px;letter-spacing:.1em;color:var(--t3);text-transform:uppercase;margin-bottom:9px}
+.kbd-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
+.kbd-row span:first-child{font-size:12px;color:var(--t2)}
+.kbd-key{font-family:var(--fm);font-size:10px;color:var(--t3);background:var(--layer);padding:2px 8px;border-radius:5px;border:1px solid var(--b1)}
+
+/* ── FLOATING ELEMENTS (fixed, always on top) ── */
+.top-bar{position:fixed;top:16px;right:16px;display:flex;gap:8px;z-index:300}
+.glass-btn{background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--b2);border-radius:var(--pill);color:var(--t2);padding:8px 14px;font-family:var(--fb);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.glass-btn:hover{border-color:var(--ba);color:var(--ta);background:var(--glass2)}
+.glass-btn.primary{background:var(--p);border-color:transparent;color:#fff}
+.glass-btn.primary:hover{background:#5a52dd}
+.bottom-bar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:300;display:flex;gap:6px;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--b2);border-radius:var(--pill);padding:6px}
+.msb{padding:7px 14px;border-radius:var(--pill);font-size:12px;font-weight:500;cursor:pointer;color:var(--t3);background:none;border:none;transition:all .2s;font-family:var(--fb)}
+.msb.active{background:var(--elevated);color:var(--t1)}
+.geo-btn{position:fixed;bottom:80px;right:16px;width:42px;height:42px;border-radius:50%;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--b2);color:var(--t2);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;z-index:300}
+.geo-btn:hover{border-color:var(--ba);color:var(--p)}
+.geo-btn.pulsing{animation:gpulse 1.4s ease-in-out infinite}
+@keyframes gpulse{0%,100%{box-shadow:0 0 0 0 var(--pglow)}50%{box-shadow:0 0 0 8px transparent}}
+.zoom-btns{position:fixed;right:16px;bottom:140px;z-index:300;display:flex;flex-direction:column;gap:5px}
+.zoom-btn{width:36px;height:36px;border-radius:var(--r2);background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--b2);color:var(--t2);font-size:19px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;font-family:var(--fb);line-height:1}
+.zoom-btn:hover{border-color:var(--ba);color:var(--ta)}
+#map-legend{position:fixed;left:calc(var(--sw) + 12px);bottom:70px;z-index:300;background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--b1);border-radius:var(--r3);padding:8px 13px;display:flex;gap:11px;align-items:center}
+.legend-label{font-family:var(--fm);font-size:9px;letter-spacing:.1em;color:var(--t3);text-transform:uppercase}
+.legend-item{font-size:12px;color:var(--t2)}
+.onboard-chip{position:fixed;top:68px;right:16px;background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--ba);border-radius:var(--r3);padding:12px 15px;z-index:300;max-width:230px;animation:fsi .5s 1.2s ease both;opacity:0;animation-fill-mode:forwards}
+.onboard-chip p{font-size:12px;color:var(--t2);line-height:1.5;margin-bottom:7px}
+.onboard-chip strong{color:var(--ta)}
+.onboard-dismiss{font-size:11px;color:var(--t3);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.onboard-dismiss:hover{color:var(--t2)}
+
+/* ── POPUP ── */
+.leaflet-popup-content-wrapper{background:var(--glass)!important;backdrop-filter:blur(24px)!important;-webkit-backdrop-filter:blur(24px)!important;border:1px solid var(--b2)!important;border-radius:var(--r4)!important;box-shadow:0 20px 60px rgba(0,0,0,.65)!important;padding:0!important;overflow:hidden}
+.leaflet-popup-tip-container{display:none!important}
+.leaflet-popup-close-button{color:var(--t3)!important;top:10px!important;right:12px!important;font-size:18px!important}
+.popup-content{padding:17px 19px;min-width:210px}
+.popup-emoji{font-size:26px;margin-bottom:7px;display:block}
+.popup-name{font-family:var(--fd);font-size:15px;font-weight:700;margin-bottom:3px}
+.popup-addr{font-size:11px;color:var(--t3);margin-bottom:9px}
+.popup-note{font-size:12px;color:var(--t2);font-style:italic;line-height:1.5;margin-bottom:11px}
+.popup-actions{display:flex;gap:5px}
+.pop-btn{flex:1;padding:7px;background:var(--elevated);border:1px solid var(--b1);border-radius:var(--r2);color:var(--t2);font-size:11px;text-align:center;cursor:pointer;transition:all .2s;font-family:var(--fb)}
+.pop-btn:hover{border-color:var(--ba);color:var(--ta)}
+
+/* ── CONTEXT MENU ── */
+#ctx-menu{position:fixed;z-index:500;background:var(--layer);border:1px solid var(--b2);border-radius:var(--r3);padding:5px;min-width:176px;box-shadow:0 14px 44px rgba(0,0,0,.55);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:none;animation:fsi .15s ease both}
+#ctx-menu.show{display:block}
+.ctx-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r2);cursor:pointer;font-size:13px;color:var(--t2);transition:background .1s,color .1s}
+.ctx-item:hover{background:var(--elevated);color:var(--t1)}
+.ctx-item.danger:hover{background:rgba(244,63,94,.1);color:var(--rose)}
+.ctx-sep{height:1px;background:var(--b1);margin:4px 0}
+
+/* ── MODAL ── */
+.modal-backdrop{position:fixed;inset:0;background:rgba(7,7,13,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:600;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}
+.modal-backdrop.open{opacity:1;pointer-events:all}
+.modal{background:var(--layer);border:1px solid var(--b2);border-radius:var(--r4);width:476px;max-width:calc(100vw - 28px);max-height:90vh;overflow-y:auto;transform:translateY(14px) scale(.98);transition:transform .25s cubic-bezier(.34,1.56,.64,1);box-shadow:0 36px 100px rgba(0,0,0,.7)}
+.modal-backdrop.open .modal{transform:translateY(0) scale(1)}
+.modal-header{padding:21px 21px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-title{font-family:var(--fd);font-size:17px;font-weight:700}
+.modal-x{width:29px;height:29px;border-radius:var(--r2);background:var(--elevated);border:1px solid var(--b1);color:var(--t3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:17px;line-height:1}
+.modal-x:hover{color:var(--t1);border-color:var(--b2)}
+.modal-body{padding:0 21px 21px}
+.field-group{margin-bottom:15px}
+.field-label{font-family:var(--fm);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:6px;display:block}
+.field-input{width:100%;background:var(--elevated);border:1px solid var(--b1);border-radius:var(--r2);padding:10px 13px;color:var(--t1);font-family:var(--fb);font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s;resize:none}
+.field-input::placeholder{color:var(--t3)}
+.field-input:focus{border-color:var(--ba);box-shadow:0 0 0 3px var(--pglow)}
+.emoji-picker{display:flex;gap:7px;flex-wrap:wrap}
+.emoji-opt{width:37px;height:37px;border-radius:var(--r2);background:var(--elevated);border:2px solid transparent;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.emoji-opt:hover{background:var(--surface);border-color:var(--b1)}
+.emoji-opt.sel{border-color:var(--p);background:var(--pglow)}
+.pill-row{display:flex;gap:6px;flex-wrap:wrap}
+.cpill{padding:6px 13px;border-radius:var(--pill);background:var(--elevated);border:1px solid var(--b1);color:var(--t2);font-size:12px;cursor:pointer;transition:all .15s}
+.cpill:hover{border-color:var(--b2)}
+.cpill.sel{background:var(--pglow);border-color:var(--ba);color:var(--ta)}
+.modal-footer{display:flex;gap:7px;justify-content:flex-end;padding-top:15px;border-top:1px solid var(--b1)}
+.btn{padding:9px 17px;border-radius:var(--r2);font-family:var(--fb);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:1px solid var(--b1)}
+.btn-ghost{background:transparent;color:var(--t2)}
+.btn-ghost:hover{background:var(--elevated);color:var(--t1)}
+.btn-primary{background:var(--p);color:#fff;border-color:transparent}
+.btn-primary:hover{background:#5a52dd;transform:translateY(-1px)}
+
+/* ── AI MODAL ── */
+.ai-modal{border-color:var(--ba);box-shadow:0 0 0 1px var(--pglow),0 36px 100px rgba(0,0,0,.7)}
+.ai-cmd-bar{display:flex;align-items:center;gap:10px;padding:15px 17px;border-bottom:1px solid var(--b1)}
+.ai-sparkle{width:27px;height:27px;border-radius:8px;background:linear-gradient(135deg,var(--p),var(--p2));display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.ai-cmd-input{flex:1;background:none;border:none;color:var(--t1);font-family:var(--fb);font-size:15px;outline:none}
+.ai-cmd-input::placeholder{color:var(--t3)}
+.ai-shortcut{font-family:var(--fm);font-size:10px;color:var(--t3);background:var(--elevated);padding:3px 7px;border-radius:5px;border:1px solid var(--b1)}
+.ai-list{padding:7px}
+.ai-row{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:var(--r2);cursor:pointer;transition:background .15s}
+.ai-row:hover,.ai-row.focused{background:var(--elevated)}
+.ai-row-icon{width:35px;height:35px;border-radius:var(--r2);background:var(--surface);border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.ai-row-info{flex:1}
+.ai-row-title{font-size:13px;font-weight:500}
+.ai-row-desc{font-size:11px;color:var(--t3);margin-top:1px}
+.ai-row-pill{font-size:10px;padding:3px 8px;border-radius:var(--pill);background:var(--elevated);color:var(--t3);border:1px solid var(--b1);white-space:nowrap}
+.ai-quick{padding:7px 15px 13px;border-top:1px solid var(--b1);display:flex;gap:6px;flex-wrap:wrap}
+.qprompt{font-size:11px;color:var(--t2);background:var(--elevated);border:1px solid var(--b1);padding:5px 11px;border-radius:var(--pill);cursor:pointer;transition:all .15s;white-space:nowrap}
+.qprompt:hover{border-color:var(--ba);color:var(--ta)}
+
+/* ── TOAST ── */
+#toast-wrap{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:700;display:flex;flex-direction:column;gap:7px;align-items:center;pointer-events:none}
+.toast{background:var(--elevated);border:1px solid var(--b2);border-radius:var(--pill);padding:9px 17px;color:var(--t1);font-size:13px;font-weight:500;display:flex;align-items:center;gap:7px;backdrop-filter:blur(20px);animation:tin .28s cubic-bezier(.34,1.56,.64,1) both;pointer-events:all;box-shadow:0 6px 28px rgba(0,0,0,.4);white-space:nowrap}
+.toast.ok{border-color:rgba(16,185,129,.32)}
+.tdot{width:6px;height:6px;border-radius:50%;background:var(--p);flex-shrink:0}
+.toast.ok .tdot{background:var(--mint)}
+@keyframes tin{from{opacity:0;transform:translateY(10px) scale(.93)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes tout{to{opacity:0;transform:translateY(7px) scale(.95)}}
+
+/* ── ANIMATION ── */
+@keyframes fsi{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+.pcard:nth-child(2){animation-delay:.04s}.pcard:nth-child(3){animation-delay:.08s}.pcard:nth-child(4){animation-delay:.12s}.pcard:nth-child(5){animation-delay:.16s}
+
+/* ── MOBILE ── */
+@media(max-width:680px){
+  :root{--sw:100%}
+  #app{flex-direction:column}
+  #map-wrap{height:44%;flex:none}
+  #sidebar{position:static;height:56%;border-right:none;border-top:1px solid var(--b2);border-radius:18px 18px 0 0}
+  .drag-handle{display:block}
+  .top-bar{top:8px;right:8px}
+  .bottom-bar{display:none}
+  .geo-btn{bottom:57%;right:10px}
+  .zoom-btns{bottom:57%;right:56px;flex-direction:row}
+  #map-legend{display:none}
+  .onboard-chip{display:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- SIDEBAR -->
+  <aside id="sidebar">
+    <div class="drag-handle"></div>
+    <div class="logo-bar">
+      <div class="wordmark"><span class="dot"></span>Mapz</div>
+      <div class="logo-actions">
+        <button class="icon-btn" title="New place" id="add-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <button class="icon-btn" title="Settings" onclick="showToast('⚙️ Settings coming soon')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="cmd-wrap">
+      <svg class="cmd-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="cmd-input" id="search-input" placeholder="Search places, memories, vibes…" autocomplete="off" onfocus="showInlineAI()" oninput="handleSearch(this.value)">
+      <span class="cmd-ai-badge">AI</span>
+      <div id="ai-results">
+        <div class="ai-thinking"><div class="ai-thinking-dots"><span></span><span></span><span></span></div>Thinking about your places…</div>
+      </div>
+    </div>
+
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-panel="places" onclick="switchTab(this,'places')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Places
+      </button>
+      <button class="nav-tab" data-panel="timeline" onclick="switchTab(this,'timeline')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Timeline
+      </button>
+      <button class="nav-tab" data-panel="trips" onclick="switchTab(this,'trips')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 17l2-2h14l2 2M3 7l2 2h14l2-2M2 12h20"/></svg>Trips
+      </button>
+      <button class="nav-tab" data-panel="journal" onclick="switchTab(this,'journal')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Journal
+      </button>
+      <button class="nav-tab" data-panel="stats" onclick="switchTab(this,'stats')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Stats
+      </button>
+    </nav>
+
+    <div class="panel-content">
+
+      <!-- PLACES -->
+      <div class="panel-section active" id="panel-places">
+        <p class="slabel">Pinned</p>
+        <div class="pcard pinned" onclick="flyTo(12.9716,77.5946)">
+          <div class="pcard-top"><div class="pcard-emoji">☕</div><div class="pcard-meta"><div class="pcard-name">Third Wave Coffee</div><div class="pcard-addr">Indiranagar, Bengaluru</div></div><span class="pbadge bc">Café</span></div>
+          <div class="pcard-note">"The cortado here hits different. Best work-from-café energy in the city."</div>
+          <div class="pcard-footer"><span class="pcard-time">visited 3 days ago</span><div class="ptags"><span class="ptag">work</span><span class="ptag">morning</span></div></div>
+        </div>
+        <div class="pcard pinned" onclick="flyTo(12.9352,77.6245)">
+          <div class="pcard-top"><div class="pcard-emoji">🌅</div><div class="pcard-meta"><div class="pcard-name">Lalbagh Rock</div><div class="pcard-addr">Lalbagh Botanical Garden</div></div><span class="pbadge bp">Photo</span></div>
+          <div class="pcard-note">"Golden hour here is unreal. 5:45pm is the sweet spot."</div>
+          <div class="pcard-footer"><span class="pcard-time">visited 2 weeks ago</span><div class="ptags"><span class="ptag">photography</span></div></div>
+        </div>
+        <p class="slabel">Collections</p>
+        <div class="coll-item" onclick="switchTab(document.querySelector('[data-panel=trips]'),'trips')">
+          <div class="coll-icon" style="background:rgba(245,158,11,.12)">☕</div><div><div class="coll-name">Best Cafés</div><div class="coll-count">12 places · Bengaluru</div></div>
+          <svg style="margin-left:auto;color:var(--t3)" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="coll-item">
+          <div class="coll-icon" style="background:rgba(244,63,94,.12)">🌇</div><div><div class="coll-name">Date Spots</div><div class="coll-count">7 places · Bengaluru</div></div>
+          <svg style="margin-left:auto;color:var(--t3)" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="coll-item">
+          <div class="coll-icon" style="background:rgba(16,185,129,.12)">🍜</div><div><div class="coll-name">Biryani Trail</div><div class="coll-count">9 places · BLR + Hyd</div></div>
+          <svg style="margin-left:auto;color:var(--t3)" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <p class="slabel">Recently Visited</p>
+        <div class="pcard" onclick="flyTo(12.9698,77.7500)">
+          <div class="pcard-top"><div class="pcard-emoji">🎮</div><div class="pcard-meta"><div class="pcard-name">Play Zone</div><div class="pcard-addr">Whitefield, Bengaluru</div></div><span class="pbadge bm">Memory</span></div>
+          <div class="pcard-footer"><span class="pcard-time">yesterday</span><div class="ptags"><span class="ptag">gaming</span><span class="ptag">friends</span></div></div>
+        </div>
+        <div class="pcard" onclick="flyTo(12.9279,77.6271)">
+          <div class="pcard-top"><div class="pcard-emoji">🍛</div><div class="pcard-meta"><div class="pcard-name">Meghana Foods</div><div class="pcard-addr">Koramangala, Bengaluru</div></div><span class="pbadge bf">Food</span></div>
+          <div class="pcard-note">"Best biryani in Bangalore. Period."</div>
+          <div class="pcard-footer"><span class="pcard-time">3 days ago</span><div class="ptags"><span class="ptag">biryani</span></div></div>
+        </div>
+      </div>
+
+      <!-- TIMELINE -->
+      <div class="panel-section" id="panel-timeline">
+        <p class="slabel">June 2025</p>
+        <div class="tl-item"><div class="tl-dot hi">🎂</div><div class="tl-body"><div class="tl-title">Arjun's Birthday Dinner</div><div class="tl-sub">Toit Brewpub · Jun 28 · 8pm</div><span class="tl-mood">😄 Epic night</span></div></div>
+        <div class="tl-item"><div class="tl-dot">🌅</div><div class="tl-body"><div class="tl-title">Lalbagh Sunrise Walk</div><div class="tl-sub">Lalbagh Garden · Jun 22 · 6am</div><span class="tl-mood">🧘 Peaceful</span></div></div>
+        <div class="tl-item"><div class="tl-dot">☕</div><div class="tl-body"><div class="tl-title">Deep work session</div><div class="tl-sub">Third Wave · Jun 20 · 9:30am</div><span class="tl-mood">💻 Productive</span></div></div>
+        <p class="slabel">May 2025</p>
+        <div class="tl-item"><div class="tl-dot hi">🏖️</div><div class="tl-body"><div class="tl-title">Goa Trip — Day 1</div><div class="tl-sub">Palolem Beach · May 18–22</div><span class="tl-mood">🌊 Adventure</span></div></div>
+        <div class="tl-item"><div class="tl-dot">🍜</div><div class="tl-body"><div class="tl-title">Best biryani ever?</div><div class="tl-sub">Meghana Foods · May 12</div><span class="tl-mood">😭 Emotional</span></div></div>
+        <div class="tl-item"><div class="tl-dot hi">💍</div><div class="tl-body"><div class="tl-title">First date — Noon</div><div class="tl-sub">Matteo Coffea · May 4</div><span class="tl-mood">🫀 Heart full</span></div></div>
+        <div class="tl-item"><div class="tl-dot">🎓</div><div class="tl-body"><div class="tl-title">Joined new company</div><div class="tl-sub">MG Road Area · May 1</div><span class="tl-mood">🚀 New chapter</span></div></div>
+      </div>
+
+      <!-- TRIPS -->
+      <div class="panel-section" id="panel-trips">
+        <p class="slabel">Planning</p>
+        <div class="trip-card">
+          <div class="trip-header"><div class="trip-flag">🇯🇵</div><div style="flex:1"><div class="trip-name">Tokyo · Kyoto</div><div class="trip-date">Sep 14 – Sep 28, 2025</div></div><span class="trip-status sp">Planning</span></div>
+          <div class="trip-days">
+            <div class="trip-day"><span class="trip-day-num">Day 1</span><span>Arrive · Shinjuku check-in</span><span class="trip-day-spots">3 spots</span></div>
+            <div class="trip-day"><span class="trip-day-num">Day 2</span><span>Harajuku · Meiji · Shibuya</span><span class="trip-day-spots">5 spots</span></div>
+            <div class="trip-day"><span class="trip-day-num">Day 3</span><span>TeamLab Planets · Odaiba</span><span class="trip-day-spots">2 spots</span></div>
+            <div class="trip-day"><span class="trip-day-num">Food</span><span>Ramen · Sushi · Gyoza…</span><span class="trip-day-spots">14 spots</span></div>
+          </div>
+        </div>
+        <p class="slabel">Past Trips</p>
+        <div class="trip-card">
+          <div class="trip-header"><div class="trip-flag">🏖️</div><div style="flex:1"><div class="trip-name">Goa Weekend</div><div class="trip-date">May 18 – 22, 2025</div></div><span class="trip-status sd">Done</span></div>
+          <div class="trip-days">
+            <div class="trip-day"><span class="trip-day-num">Stay</span><span>Palolem Beach Huts</span><span class="trip-day-spots">✓ Checked</span></div>
+            <div class="trip-day"><span class="trip-day-num">Food</span><span>La Plage · Sublime · Bhatti</span><span class="trip-day-spots">8 spots</span></div>
+          </div>
+        </div>
+        <div class="trip-card">
+          <div class="trip-header"><div class="trip-flag">🏔️</div><div style="flex:1"><div class="trip-name">Coorg Escape</div><div class="trip-date">Feb 3 – 5, 2025</div></div><span class="trip-status sd">Done</span></div>
+          <div class="trip-days">
+            <div class="trip-day"><span class="trip-day-num">Stay</span><span>Tamara Coorg Resort</span><span class="trip-day-spots">3 nights</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- JOURNAL -->
+      <div class="panel-section" id="panel-journal">
+        <p class="slabel">Recent entries</p>
+        <div class="jcard">
+          <div class="jcard-header"><div class="jdate"><div class="jday">28</div><div class="jmonth">Jun</div></div><div><div class="jtitle">Arjun's birthday — Toit nights</div><div class="jloc">📍 Toit Brewpub, Indiranagar</div></div></div>
+          <div class="jbody">Ten of us crammed into the rooftop corner. The mango wheat beer was cold, the laughter was loud, and somewhere between the nachos and midnight, I remembered why this city feels like home.</div>
+        </div>
+        <div class="jcard">
+          <div class="jcard-header"><div class="jdate"><div class="jday">22</div><div class="jmonth">Jun</div></div><div><div class="jtitle">6am walk at Lalbagh</div><div class="jloc">📍 Lalbagh Botanical Garden</div></div></div>
+          <div class="jbody">The giant rock at sunrise. Nobody around, just pigeons and morning light cutting through the jacaranda trees. Brought my AirPods and a coffee. Need to do this every week.</div>
+        </div>
+        <div class="jcard">
+          <div class="jcard-header"><div class="jdate"><div class="jday">04</div><div class="jmonth">May</div></div><div><div class="jtitle">First date. Matteo Coffea.</div><div class="jloc">📍 Matteo Coffea, Church Street</div></div></div>
+          <div class="jbody">The filter coffee was excellent. The conversation was better. I keep coming back to this place now — it has an energy I can't quite explain.</div>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="panel-section" id="panel-stats">
+        <div class="stats-hero">
+          <div class="stats-big">147</div>
+          <div class="stats-label">Places Explored · 2025</div>
+        </div>
+        <div class="stats-grid">
+          <div class="scard sa"><div class="scard-num">38</div><div class="scard-lbl">Cafés visited</div></div>
+          <div class="scard st"><div class="scard-num">3</div><div class="scard-lbl">Trips taken</div></div>
+          <div class="scard sc"><div class="scard-num">22</div><div class="scard-lbl">Journal entries</div></div>
+          <div class="scard sr"><div class="scard-num">6</div><div class="scard-lbl">Cities explored</div></div>
+        </div>
+        <div class="spark-wrap">
+          <div class="spark-head"><span class="spark-title">Places per month</span><span class="spark-val">↑ 23%</span></div>
+          <canvas class="spark" id="spark1" height="48"></canvas>
+        </div>
+        <div class="hmap-wrap">
+          <div class="spark-head"><span class="spark-title">Activity this year</span><span class="spark-val">147 days</span></div>
+          <div class="hmap-grid" id="heatmap"></div>
+        </div>
+        <p class="slabel">Top spots</p>
+        <div class="pcard"><div class="pcard-top"><div class="pcard-emoji">☕</div><div class="pcard-meta"><div class="pcard-name">Third Wave Coffee</div><div class="pcard-addr">Visited 14× this year</div></div><span class="pbadge bc">#1</span></div></div>
+        <div class="pcard"><div class="pcard-top"><div class="pcard-emoji">🍛</div><div class="pcard-meta"><div class="pcard-name">Meghana Foods</div><div class="pcard-addr">Visited 8× this year</div></div><span class="pbadge bf">#2</span></div></div>
+        <div class="pcard"><div class="pcard-top"><div class="pcard-emoji">🌅</div><div class="pcard-meta"><div class="pcard-name">Lalbagh Garden</div><div class="pcard-addr">Visited 6× this year</div></div><span class="pbadge bp">#3</span></div></div>
+        <p class="slabel">2025 Wrapped</p>
+        <div class="wrapped-card">
+          <div class="wrapped-title">✦ Your Year in Places</div>
+          <div class="wrapped-row"><span>☕ Most visited category</span><span>Cafés (38)</span></div>
+          <div class="wrapped-row"><span>📍 Furthest from home</span><span>Palolem, Goa</span></div>
+          <div class="wrapped-row"><span>🔥 Longest streak</span><span>14 days in a row</span></div>
+          <div class="wrapped-row"><span>⏰ Fav time to explore</span><span>9–11am</span></div>
+          <div class="wrapped-row"><span>🌆 Most explored area</span><span>Indiranagar</span></div>
+        </div>
+        <div class="kbd-card">
+          <div class="kbd-title">Keyboard shortcuts</div>
+          <div class="kbd-row"><span>AI Search</span><span class="kbd-key">⌘K</span></div>
+          <div class="kbd-row"><span>New place</span><span class="kbd-key">N</span></div>
+          <div class="kbd-row"><span>Context menu</span><span class="kbd-key">Right-click map</span></div>
+          <div class="kbd-row"><span>Close / dismiss</span><span class="kbd-key">Esc</span></div>
+        </div>
+      </div>
+
+    </div><!-- end panel-content -->
+  </aside>
+
+  <!-- MAP -->
+  <div id="map-wrap">
+    <div id="map"></div>
+  </div>
+</div><!-- end #app -->
+
+<!-- FLOATING UI — all fixed-position, outside #app to avoid stacking context issues -->
+
+<div class="top-bar">
+  <button class="glass-btn" id="sat-toggle">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    Satellite
+  </button>
+  <button class="glass-btn primary" id="ai-open-btn">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    ⌘K  AI Search
+  </button>
+</div>
+
+<div class="bottom-bar">
+  <button class="msb active" id="style-dark" onclick="setMapStyle(this,'dark')">Dark</button>
+  <button class="msb" id="style-topo" onclick="setMapStyle(this,'topo')">Topo</button>
+  <button class="msb" id="style-streets" onclick="setMapStyle(this,'streets')">Streets</button>
+  <button class="msb" id="style-satellite" onclick="setMapStyle(this,'satellite')">Satellite</button>
+</div>
+
+<div class="zoom-btns">
+  <button class="zoom-btn" onclick="map.zoomIn()">+</button>
+  <button class="zoom-btn" onclick="map.zoomOut()">−</button>
+</div>
+
+<button class="geo-btn" id="geo-btn" title="My location">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M1 12h4M19 12h4"/></svg>
+</button>
+
+<div id="map-legend">
+  <span class="legend-label">Legend</span>
+  <span class="legend-item">☕ Café</span>
+  <span class="legend-item">🍛 Food</span>
+  <span class="legend-item">💍 Memory</span>
+  <span class="legend-item">🌅 Photo</span>
+  <span class="legend-item">📍 Pin</span>
+</div>
+
+<div class="onboard-chip" id="onboard">
+  <p>Right-click the map to <strong>save a place</strong> or add a memory. Press <strong>⌘K</strong> for AI search.</p>
+  <span class="onboard-dismiss" onclick="document.getElementById('onboard').remove()">Got it</span>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="ctx-menu">
+  <div class="ctx-item" id="ctx-save">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Save this place
+  </div>
+  <div class="ctx-item" id="ctx-journal">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Journal entry here
+  </div>
+  <div class="ctx-item" id="ctx-pin">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Drop a pin
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-nav">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 12 3 18 21 12 3 6"/></svg>Navigate here
+  </div>
+  <div class="ctx-item" id="ctx-copy">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy coordinates
+  </div>
+</div>
+
+<!-- ADD PLACE MODAL -->
+<div class="modal-backdrop" id="add-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Save a place</div>
+      <button class="modal-x" onclick="closeModal('add-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label">Emoji</label>
+        <div class="emoji-picker" id="emoji-picker">
+          <div class="emoji-opt sel">☕</div><div class="emoji-opt">🍛</div><div class="emoji-opt">🌅</div>
+          <div class="emoji-opt">🎮</div><div class="emoji-opt">🏖️</div><div class="emoji-opt">📍</div>
+          <div class="emoji-opt">💼</div><div class="emoji-opt">🌿</div><div class="emoji-opt">🎵</div>
+          <div class="emoji-opt">📚</div><div class="emoji-opt">🍺</div><div class="emoji-opt">💍</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Name</label>
+        <input class="field-input" type="text" id="add-name" placeholder="What is this place?">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Category</label>
+        <div class="pill-row" id="cat-pills">
+          <div class="cpill sel">Café</div><div class="cpill">Food</div><div class="cpill">Memory</div>
+          <div class="cpill">Work</div><div class="cpill">Photo spot</div><div class="cpill">Hidden gem</div><div class="cpill">Date spot</div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Note / Memory</label>
+        <textarea class="field-input" id="add-note" rows="3" placeholder="What happened here? What do you want to remember?"></textarea>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Vibe</label>
+        <div class="pill-row" id="vibe-pills">
+          <div class="cpill">😄 Joyful</div><div class="cpill">🧘 Peaceful</div><div class="cpill">💻 Productive</div>
+          <div class="cpill">🌊 Adventure</div><div class="cpill">🫀 Emotional</div><div class="cpill">🚀 Energized</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeModal('add-modal')">Cancel</button>
+        <button class="btn btn-primary" id="save-place-btn">Save place</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI COMMAND MODAL -->
+<div class="modal-backdrop" id="ai-modal">
+  <div class="modal ai-modal">
+    <div class="ai-cmd-bar">
+      <div class="ai-sparkle">✦</div>
+      <input class="ai-cmd-input" id="ai-modal-input" placeholder="Find me a quiet café with good wifi…" autocomplete="off">
+      <span class="ai-shortcut">⌘K</span>
+    </div>
+    <div class="ai-list" id="ai-modal-list">
+      <div class="ai-row focused"><div class="ai-row-icon">☕</div><div class="ai-row-info"><div class="ai-row-title">Third Wave Coffee, Indiranagar</div><div class="ai-row-desc">Quiet · outdoor seating · solid wifi · well-reviewed</div></div><div class="ai-row-pill">1.2 km</div></div>
+      <div class="ai-row"><div class="ai-row-icon">🌿</div><div class="ai-row-info"><div class="ai-row-title">Dyu Art Café</div><div class="ai-row-desc">Bohemian · books · great filter coffee · usually quiet</div></div><div class="ai-row-pill">2.4 km</div></div>
+      <div class="ai-row"><div class="ai-row-icon">📚</div><div class="ai-row-info"><div class="ai-row-title">Atta Galatta Bookstore Café</div><div class="ai-row-desc">Bookstore + café · very quiet · no music on weekdays</div></div><div class="ai-row-pill">3.1 km</div></div>
+      <div class="ai-row"><div class="ai-row-icon">🎵</div><div class="ai-row-info"><div class="ai-row-title">Matteo Coffea</div><div class="ai-row-desc">Church Street · specialty coffee · calm evenings</div></div><div class="ai-row-pill">2.9 km</div></div>
+    </div>
+    <div class="ai-quick">
+      <div class="qprompt" data-q="Best biryani within 5km">🍛 Best biryani nearby</div>
+      <div class="qprompt" data-q="Quiet work café open after 9pm">💻 Late-night work café</div>
+      <div class="qprompt" data-q="Romantic rooftop date spot Bangalore">🌇 Date spot ideas</div>
+      <div class="qprompt" data-q="Hidden gems Bengaluru">💎 Hidden gems</div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-wrap"></div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════
+//  MAPZ · Complete Interactive Engine
+// ═══════════════════════════════════
+
+// ── STATE ──
+let ctxLL = null, userMarker = null, tempPin = null;
+let selEmoji = '☕', selCat = 'Café';
+let aiSearchTimer = null, aiModalTimer = null;
+let satOn = false;
+
+const places = [
+  {lat:12.9716,lng:77.5946,e:'☕',name:'Third Wave Coffee',addr:'Indiranagar',note:'Best cortado in the city'},
+  {lat:12.9352,lng:77.6245,e:'🌅',name:'Lalbagh Rock',addr:'Lalbagh Garden',note:'Golden hour 5:45pm'},
+  {lat:12.9279,lng:77.6271,e:'🍛',name:'Meghana Foods',addr:'Koramangala',note:'Best biryani, period.'},
+  {lat:12.9698,lng:77.7500,e:'🎮',name:'Play Zone',addr:'Whitefield',note:'Gaming with the crew'},
+  {lat:12.9716,lng:77.6099,e:'💍',name:'Matteo Coffea',addr:'Church Street',note:'First date. Filter coffee.'},
+  {lat:12.9783,lng:77.6408,e:'🍺',name:'Toit Brewpub',addr:'Indiranagar',note:"Arjun's birthday rooftop"},
+];
+
+// ── MAP ──
+const map = L.map('map',{center:[12.9716,77.5946],zoom:13,zoomControl:false,attributionControl:false,preferCanvas:true});
+const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+
+function darkFilter(){
+  const tp = document.querySelector('.leaflet-tile-pane');
+  if(tp) tp.style.filter='invert(1) hue-rotate(180deg) brightness(0.68) saturate(0.52) contrast(1.15)';
+}
+setTimeout(darkFilter,200);
+map.on('tileload',darkFilter);
+
+// ── MARKERS ──
+function markerIcon(e,glow=false){
+  return L.divIcon({className:'',
+    html:`<div style="font-size:24px;cursor:pointer;filter:drop-shadow(0 3px 9px rgba(0,0,0,.55))${glow?'drop-shadow(0 0 10px #6c63ff)':''};transition:transform .15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform=''">${e}</div>`,
+    iconSize:[36,36],iconAnchor:[18,18],popupAnchor:[0,-20]});
+}
+
+function popupHTML(p){
+  return `<div class="popup-content">
+    <span class="popup-emoji">${p.e}</span>
+    <div class="popup-name">${p.name}</div>
+    <div class="popup-addr">${p.addr}</div>
+    ${p.note?`<div class="popup-note">"${p.note}"</div>`:''}
+    <div class="popup-actions">
+      <button class="pop-btn" onclick="goJournal('${p.name.replace(/'/g,"\\'")}')">📓 Journal</button>
+      <button class="pop-btn" onclick="doShare('${p.name.replace(/'/g,"\\'")}')">↗ Share</button>
+      <button class="pop-btn" onclick="doNav(${p.lat},${p.lng})">→ Go</button>
+    </div></div>`;
+}
+
+places.forEach(p=>{
+  const m=L.marker([p.lat,p.lng],{icon:markerIcon(p.e)});
+  m.bindPopup(popupHTML(p),{maxWidth:300});
+  m.addTo(map);
+});
+
+// ── RESTORE SAVED ──
+try{
+  JSON.parse(localStorage.getItem('mapz_places')||'[]').forEach(p=>{
+    const m=L.marker([p.lat,p.lng],{icon:markerIcon(p.e)});
+    m.bindPopup(popupHTML(p),{maxWidth:300});
+    m.addTo(map);
+  });
+}catch(_){}
+
+// ── FLY TO ──
+function flyTo(lat,lng){map.closePopup();map.flyTo([lat,lng],16,{duration:1.0,easeLinearity:.18})}
+
+// ── TABS ──
+function switchTab(btn,panel){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel-section').forEach(s=>s.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const el=document.getElementById('panel-'+panel);
+  if(el) el.classList.add('active');
+  if(panel==='stats') setTimeout(()=>{drawSpark();buildHeatmap();},80);
+}
+
+// ── MAP STYLE ──
+function setMapStyle(btn,style){
+  document.querySelectorAll('.msb').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const tp=document.querySelector('.leaflet-tile-pane');
+  if(!tp) return;
+  const filters={
+    dark:'invert(1) hue-rotate(180deg) brightness(0.68) saturate(0.52) contrast(1.15)',
+    topo:'invert(0.82) hue-rotate(175deg) brightness(0.78) saturate(0.85)',
+    streets:'invert(0.9) hue-rotate(190deg) brightness(0.72) saturate(0.7) contrast(1.05)',
+    satellite:'brightness(1) saturate(1.1)'
+  };
+  tp.style.filter=filters[style]||filters.dark;
+}
+
+// satellite toggle button
+document.getElementById('sat-toggle').addEventListener('click',function(){
+  satOn=!satOn;
+  if(satOn){
+    setMapStyle(document.getElementById('style-satellite'),'satellite');
+    this.innerHTML='🌑 Dark map';
+    this.style.cssText='background:rgba(20,184,166,.18);border-color:rgba(20,184,166,.4);color:#14b8a6';
+  } else {
+    setMapStyle(document.getElementById('style-dark'),'dark');
+    this.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Satellite';
+    this.style.cssText='';
+  }
+});
+
+// ── MODAL ──
+function openModal(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden'}
+function closeModal(id){document.getElementById(id).classList.remove('open');document.body.style.overflow=''}
+document.querySelectorAll('.modal-backdrop').forEach(b=>b.addEventListener('click',e=>{if(e.target===b)closeModal(b.id)}));
+
+// ── ADD PLACE ──
+document.getElementById('add-btn').addEventListener('click',()=>{resetAddForm();openModal('add-modal')});
+document.getElementById('save-place-btn').addEventListener('click',savePlace);
+
+document.getElementById('emoji-picker').addEventListener('click',e=>{
+  const opt=e.target.closest('.emoji-opt');
+  if(!opt) return;
+  document.querySelectorAll('.emoji-opt').forEach(o=>o.classList.remove('sel'));
+  opt.classList.add('sel');
+  selEmoji=opt.textContent;
+});
+
+document.getElementById('cat-pills').addEventListener('click',e=>{
+  const pill=e.target.closest('.cpill');
+  if(!pill) return;
+  document.querySelectorAll('#cat-pills .cpill').forEach(p=>p.classList.remove('sel'));
+  pill.classList.add('sel');
+  selCat=pill.textContent.trim();
+});
+
+document.getElementById('vibe-pills').addEventListener('click',e=>{
+  const pill=e.target.closest('.cpill');
+  if(!pill) return;
+  document.querySelectorAll('#vibe-pills .cpill').forEach(p=>p.classList.remove('sel'));
+  pill.classList.add('sel');
+});
+
+function resetAddForm(){
+  document.getElementById('add-name').value='';
+  document.getElementById('add-note').value='';
+  document.querySelectorAll('.emoji-opt').forEach((o,i)=>o.classList.toggle('sel',i===0));
+  document.querySelectorAll('#cat-pills .cpill').forEach((p,i)=>p.classList.toggle('sel',i===0));
+  document.querySelectorAll('#vibe-pills .cpill').forEach(p=>p.classList.remove('sel'));
+  selEmoji='☕'; selCat='Café';
+}
+
+function savePlace(){
+  const name=document.getElementById('add-name').value.trim();
+  if(!name){
+    const inp=document.getElementById('add-name');
+    inp.style.borderColor='var(--rose)';
+    inp.focus();
+    setTimeout(()=>inp.style.borderColor='',1400);
+    return;
+  }
+  const ll=ctxLL||map.getCenter();
+  const p={lat:ll.lat,lng:ll.lng,e:selEmoji,name,addr:'Saved location',note:document.getElementById('add-note').value.trim()};
+  const m=L.marker([ll.lat,ll.lng],{icon:markerIcon(selEmoji,true)});
+  m.bindPopup(popupHTML(p),{maxWidth:300});
+  m.addTo(map);
+  m.openPopup();
+  map.flyTo([ll.lat,ll.lng],16,{duration:.8});
+  try{const s=JSON.parse(localStorage.getItem('mapz_places')||'[]');s.push(p);localStorage.setItem('mapz_places',JSON.stringify(s))}catch(_){}
+  closeModal('add-modal');
+  ctxLL=null;
+  showToast(`${selEmoji} "${name}" saved`,'ok');
+}
+
+// ── AI MODAL ──
+document.getElementById('ai-open-btn').addEventListener('click',openAI);
+document.getElementById('ai-modal-input').addEventListener('input',e=>handleAIModal(e.target.value));
+document.querySelectorAll('.qprompt').forEach(q=>q.addEventListener('click',()=>{
+  const input=document.getElementById('ai-modal-input');
+  input.value=q.dataset.q;
+  handleAIModal(q.dataset.q);
+}));
+
+function openAI(){openModal('ai-modal');setTimeout(()=>document.getElementById('ai-modal-input').focus(),110)}
+
+const aiResults=[
+  {e:'☕',title:'Third Wave Coffee, Indiranagar',desc:'Quiet · outdoor seating · solid wifi · well-reviewed',dist:'1.2 km'},
+  {e:'🌿',title:'Dyu Art Café',desc:'Bohemian · books · great filter coffee · usually quiet',dist:'2.4 km'},
+  {e:'📚',title:'Atta Galatta Bookstore Café',desc:'Bookstore + café · very quiet · no music on weekdays',dist:'3.1 km'},
+  {e:'🎵',title:'Matteo Coffea',desc:'Church Street · specialty coffee · calm evenings',dist:'2.9 km'},
+];
+
+function handleAIModal(v){
+  const list=document.getElementById('ai-modal-list');
+  list.innerHTML=`<div class="ai-thinking" style="padding:14px 12px"><div class="ai-thinking-dots"><span></span><span></span><span></span></div>Finding the best matches…</div>`;
+  clearTimeout(aiModalTimer);
+  aiModalTimer=setTimeout(()=>{
+    list.innerHTML=aiResults.map((r,i)=>`
+      <div class="ai-row${i===0?' focused':''}" onclick="closeModal('ai-modal');flyTo(12.9716,77.5946)">
+        <div class="ai-row-icon">${r.e}</div>
+        <div class="ai-row-info"><div class="ai-row-title">${r.title}</div><div class="ai-row-desc">${r.desc}</div></div>
+        <div class="ai-row-pill">${r.dist}</div>
+      </div>`).join('');
+  },v?600:0);
+}
+
+// ── INLINE SEARCH ──
+const inlineSuggestions=[
+  {e:'☕',name:'Matteo Coffea',sub:'Church Street · quiet · specialty',dist:'2.9 km'},
+  {e:'🌿',name:'Dyu Art Café',sub:'Bohemian · books · great wifi',dist:'2.4 km'},
+  {e:'📚',name:'Atta Galatta',sub:'Bookstore café · very quiet',dist:'3.1 km'},
+  {e:'☁️',name:'Kapi Kottai',sub:'Filter coffee · very Bangalore',dist:'1.8 km'},
+];
+
+function showInlineAI(){
+  document.getElementById('ai-results').classList.add('show');
+  setTimeout(()=>document.addEventListener('click',closeInlineAI),10);
+}
+function hideInlineAI(){document.getElementById('ai-results').classList.remove('show')}
+function closeInlineAI(e){if(!e.target.closest('#ai-results')&&!e.target.closest('#search-input')){hideInlineAI();document.removeEventListener('click',closeInlineAI)}}
+
+function handleSearch(v){
+  const el=document.getElementById('ai-results');
+  el.innerHTML=`<div class="ai-thinking"><div class="ai-thinking-dots"><span></span><span></span><span></span></div>Searching…</div>`;
+  clearTimeout(aiSearchTimer);
+  if(!v) return;
+  aiSearchTimer=setTimeout(()=>{
+    el.innerHTML=inlineSuggestions.map(r=>`
+      <div class="ai-result-item" onclick="hideInlineAI();map.flyTo([12.9716,77.6099],16)">
+        <span class="ai-result-emoji">${r.e}</span>
+        <div class="ai-result-text"><div class="ai-result-name">${r.name}</div><div class="ai-result-sub">${r.sub}</div></div>
+        <span class="ai-result-dist">${r.dist}</span>
+      </div>`).join('');
+  },680);
+}
+
+// ── CONTEXT MENU ──
+const ctxMenu=document.getElementById('ctx-menu');
+let longPT;
+
+map.on('contextmenu',e=>{ctxLL=e.latlng;showCtx(e.originalEvent.clientX,e.originalEvent.clientY)});
+map.on('mousedown touchstart',e=>{
+  longPT=setTimeout(()=>{
+    if(!e.latlng) return;
+    ctxLL=e.latlng;
+    const oe=e.originalEvent;
+    const x=oe.touches?oe.touches[0].clientX:oe.clientX;
+    const y=oe.touches?oe.touches[0].clientY:oe.clientY;
+    showCtx(x,y);
+  },600);
+});
+map.on('mouseup touchend mousemove',()=>clearTimeout(longPT));
+
+function showCtx(x,y){
+  closeCtx();
+  const mw=188,mh=200;
+  ctxMenu.style.left=Math.min(x,window.innerWidth-mw-6)+'px';
+  ctxMenu.style.top=Math.min(y,window.innerHeight-mh-6)+'px';
+  ctxMenu.classList.add('show');
+  setTimeout(()=>document.addEventListener('click',closeCtxOutside),10);
+}
+function closeCtx(){ctxMenu.classList.remove('show');document.removeEventListener('click',closeCtxOutside)}
+function closeCtxOutside(e){if(!e.target.closest('#ctx-menu'))closeCtx()}
+
+document.getElementById('ctx-save').onclick=()=>{closeCtx();resetAddForm();openModal('add-modal')};
+document.getElementById('ctx-journal').onclick=()=>{closeCtx();switchTab(document.querySelector('[data-panel="journal"]'),'journal');showToast('📓 New entry started')};
+document.getElementById('ctx-pin').onclick=()=>{
+  closeCtx();
+  if(!ctxLL) return;
+  if(tempPin) map.removeLayer(tempPin);
+  tempPin=L.marker([ctxLL.lat,ctxLL.lng],{icon:markerIcon('📍')}).addTo(map);
+  map.flyTo([ctxLL.lat,ctxLL.lng],15,{duration:.6});
+  showToast('📍 Pin dropped');
+};
+document.getElementById('ctx-nav').onclick=()=>{
+  closeCtx();
+  if(!ctxLL) return;
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${ctxLL.lat},${ctxLL.lng}`,'_blank');
+};
+document.getElementById('ctx-copy').onclick=()=>{
+  closeCtx();
+  if(!ctxLL) return;
+  const txt=`${ctxLL.lat.toFixed(6)}, ${ctxLL.lng.toFixed(6)}`;
+  navigator.clipboard?.writeText(txt).then(()=>showToast(`📋 ${txt}`)).catch(()=>showToast('Copied!'));
+};
+
+// ── POPUP ACTIONS ──
+function goJournal(name){map.closePopup();switchTab(document.querySelector('[data-panel="journal"]'),'journal');showToast(`📓 Entry for ${name}`)}
+function doShare(name){
+  map.closePopup();
+  if(navigator.share){navigator.share({title:name,text:`Check out ${name} on Mapz`,url:location.href})}
+  else{navigator.clipboard?.writeText(`${name} — saved in Mapz`);showToast('🔗 Copied')}
+}
+function doNav(lat,lng){map.closePopup();window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`,'_blank')}
+
+// ── GEOLOCATION ──
+document.getElementById('geo-btn').addEventListener('click',locateMe);
+function locateMe(){
+  const btn=document.getElementById('geo-btn');
+  btn.classList.add('pulsing');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    btn.classList.remove('pulsing');
+    const{latitude:lat,longitude:lng}=pos.coords;
+    if(userMarker) map.removeLayer(userMarker);
+    userMarker=L.marker([lat,lng],{icon:L.divIcon({className:'',
+      html:'<div style="width:14px;height:14px;border-radius:50%;background:#6c63ff;border:2.5px solid white;box-shadow:0 0 0 5px rgba(108,99,255,.25)"></div>',
+      iconSize:[14,14],iconAnchor:[7,7]})}).addTo(map);
+    map.flyTo([lat,lng],15,{duration:.9});
+    showToast('📍 You are here','ok');
+  },()=>{
+    btn.classList.remove('pulsing');
+    map.flyTo([12.9716,77.5946],14,{duration:.9});
+    showToast('📍 Location demo: Bengaluru');
+  },{enableHighAccuracy:true,timeout:7000});
+}
+
+// ── TOAST ──
+function showToast(msg,type=''){
+  const wrap=document.getElementById('toast-wrap');
+  const t=document.createElement('div');
+  t.className=`toast${type?' '+type:''}`;
+  t.innerHTML=`<span class="tdot"></span>${msg}`;
+  wrap.appendChild(t);
+  setTimeout(()=>{t.style.animation='tout .28s ease forwards';setTimeout(()=>t.remove(),280)},2700);
+}
+
+// ── SPARKLINE ──
+function drawSpark(){
+  const c=document.getElementById('spark1');
+  if(!c||!c.offsetWidth) return;
+  const ctx=c.getContext('2d');
+  const dpr=window.devicePixelRatio||1;
+  const W=c.offsetWidth,H=48;
+  c.width=W*dpr; c.height=H*dpr; ctx.scale(dpr,dpr);
+  const data=[8,12,6,15,11,18,14,22,17,25,20,29];
+  const max=Math.max(...data);
+  const pts=data.map((v,i)=>({x:i*(W/(data.length-1)),y:H-(v/max)*(H-10)-5}));
+  ctx.clearRect(0,0,W,H);
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(108,99,255,.28)'); g.addColorStop(1,'rgba(108,99,255,.01)');
+  ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++){const cx=(pts[i-1].x+pts[i].x)/2;ctx.bezierCurveTo(cx,pts[i-1].y,cx,pts[i].y,pts[i].x,pts[i].y)}
+  ctx.lineTo(pts[pts.length-1].x,H); ctx.lineTo(0,H); ctx.closePath();
+  ctx.fillStyle=g; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++){const cx=(pts[i-1].x+pts[i].x)/2;ctx.bezierCurveTo(cx,pts[i-1].y,cx,pts[i].y,pts[i].x,pts[i].y)}
+  ctx.strokeStyle='#6c63ff'; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
+  const last=pts[pts.length-1];
+  ctx.beginPath(); ctx.arc(last.x,last.y,4.5,0,Math.PI*2);
+  ctx.fillStyle='#6c63ff'; ctx.fill();
+  ctx.strokeStyle='#07070d'; ctx.lineWidth=2.5; ctx.stroke();
+}
+
+// ── HEATMAP ──
+function buildHeatmap(){
+  const g=document.getElementById('heatmap');
+  if(!g) return;
+  let seed=42,html='';
+  const rnd=()=>{seed=(seed*1664525+1013904223)&0xffffffff;return(seed>>>0)/0xffffffff};
+  const lvls=[0,0,0,1,1,2,2,3,4];
+  for(let i=0;i<52*7;i++){
+    const l=rnd()<.42?0:lvls[Math.floor(rnd()*lvls.length)];
+    html+=`<div class="hcell${l?' l'+l:''}"></div>`;
+  }
+  g.innerHTML=html;
+}
+
+// ── KEYBOARD ──
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openAI()}
+  else if(e.key==='Escape'){closeModal('add-modal');closeModal('ai-modal');closeCtx();hideInlineAI()}
+  else if(e.key==='n'&&!e.target.matches('input,textarea')){resetAddForm();openModal('add-modal')}
+});
+
+// ── PWA ──
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded',()=>{
+  buildHeatmap();
+  setTimeout(()=>showToast('👋 Right-click the map to save a place'),1100);
+  // handle startup url params
+  const p=new URLSearchParams(location.search);
+  if(p.get('action')==='add'){resetAddForm();openModal('add-modal')}
+  if(p.get('action')==='search') openAI();
+  if(p.get('tab')){const btn=document.querySelector(`[data-panel="${p.get('tab')}"]`);if(btn)switchTab(btn,p.get('tab'))}
+});
+</script>
+</body>
+</html>
