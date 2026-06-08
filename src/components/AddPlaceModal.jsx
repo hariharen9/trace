@@ -3,23 +3,45 @@ import { useApp } from '../context/AppContext';
 import { EMOJI_OPTIONS, CATEGORY_OPTIONS, VIBE_OPTIONS } from '../data';
 
 export default function AddPlaceModal() {
-  const { addModalOpen, closeAddModal, addPlace } = useApp();
+  const { addModalOpen, closeAddModal, addPlace, ctxLatLng } = useApp();
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
+  const [addr, setAddr] = useState('');
   const [emoji, setEmoji] = useState('☕');
   const [category, setCategory] = useState('Café');
   const [vibe, setVibe] = useState('');
   const [nameError, setNameError] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
   const nameRef = useRef(null);
 
-  // Reset form when opened
+  // Reset form + reverse geocode when opened
   useEffect(() => {
     if (addModalOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setName(''); setNote(''); setEmoji('☕'); setCategory('Café'); setVibe(''); setNameError(false);
+      setName(''); setNote(''); setAddr(''); setEmoji('☕'); setCategory('Café'); setVibe(''); setNameError(false);
       setTimeout(() => nameRef.current?.focus(), 150);
+
+      // Reverse geocode if we have coordinates
+      if (ctxLatLng) {
+        setGeoLoading(true);
+        setAddr(`${ctxLatLng.lat.toFixed(5)}, ${ctxLatLng.lng.toFixed(5)}`);
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${ctxLatLng.lat}&lon=${ctxLatLng.lng}&zoom=18&addressdetails=1`, {
+          headers: { 'Accept-Language': 'en' },
+        })
+          .then(r => r.json())
+          .then(data => {
+            if (data?.display_name) {
+              // Shorten: take first 2-3 meaningful parts
+              const parts = data.display_name.split(', ');
+              const short = parts.slice(0, 3).join(', ');
+              setAddr(short);
+            }
+          })
+          .catch(() => { /* keep coordinate fallback */ })
+          .finally(() => setGeoLoading(false));
+      }
     }
-  }, [addModalOpen]);
+  }, [addModalOpen, ctxLatLng]);
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -28,7 +50,14 @@ export default function AddPlaceModal() {
       setTimeout(() => setNameError(false), 1400);
       return;
     }
-    addPlace({ emoji, name: name.trim(), addr: 'Saved location', note: note.trim(), category });
+    addPlace({
+      emoji,
+      name: name.trim(),
+      addr: addr.trim() || 'Saved location',
+      note: note.trim(),
+      category,
+      vibe,
+    });
   };
 
   if (!addModalOpen) return null;
@@ -74,6 +103,17 @@ export default function AddPlaceModal() {
               className="w-full bg-elevated rounded-lg py-3 px-4 text-t1 font-body text-sm outline-none transition-all duration-200 placeholder:text-t3 focus:border-ba focus:shadow-[0_0_0_3px_var(--color-pglow)] border"
               style={{ borderColor: nameError ? 'var(--color-rose)' : 'var(--color-b1)' }}
               placeholder="What is this place?" />
+          </div>
+
+          {/* Address (auto-filled via reverse geocoding) */}
+          <div className="mb-5">
+            <label className="font-mono text-[10px] tracking-[0.1em] uppercase text-t3 mb-2 flex items-center gap-2">
+              Address
+              {geoLoading && <span className="text-primary text-[9px] font-normal normal-case">detecting…</span>}
+            </label>
+            <input value={addr} onChange={(e) => setAddr(e.target.value)}
+              className="w-full bg-elevated border border-b1 rounded-lg py-3 px-4 text-t1 font-body text-sm outline-none transition-all duration-200 placeholder:text-t3 focus:border-ba focus:shadow-[0_0_0_3px_var(--color-pglow)]"
+              placeholder="Address or location name" />
           </div>
 
           {/* Category */}

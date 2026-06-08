@@ -1,9 +1,16 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import L from 'leaflet';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './AuthContext';
-import { DEMO_PLACES, MAP_FILTERS } from '../data';
+import { seedDemoData } from '../utils/seedData';
+const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY;
+const TILE_URLS = {
+  streets: `https://api.maptiler.com/maps/streets-v2-dark/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
+  dark: `https://api.maptiler.com/maps/streets-v2-dark/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
+  topo: `https://api.maptiler.com/maps/topo-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
+  satellite: `https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
+};
 
 const AppContext = createContext(null);
 // eslint-disable-next-line react-refresh/only-export-components
@@ -44,23 +51,25 @@ function addMarkerToMap(map, place, glow = false) {
 export function AppProvider({ children }) {
   const { user } = useAuth();
   const mapRef = useRef(null);
+  const tileLayerRef = useRef(null);
   const userMarkerRef = useRef(null);
   const tempPinRef = useRef(null);
-  const savedMarkersRef = useRef([]);
+  const markersRef = useRef([]);
+  const seededRef = useRef(false);
 
   const [activeTab, setActiveTab] = useState('places');
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState({ show: false, x: 0, y: 0 });
   const [ctxLatLng, setCtxLatLng] = useState(null);
-  const [mapStyle, setMapStyleState] = useState('dark');
+  const [mapStyle, setMapStyleState] = useState('streets');
   const [satOn, setSatOn] = useState(false);
   const [onboardVisible, setOnboardVisible] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [savedPlaces, setSavedPlaces] = useState([]);
   const [placesLoading, setPlacesLoading] = useState(true);
 
-  // ── Firestore real-time sync ──
+  // ── Seed demo data on first login, then subscribe to Firestore ──
   useEffect(() => {
     if (!user) {
       setSavedPlaces([]);
@@ -68,29 +77,43 @@ export function AppProvider({ children }) {
       return;
     }
 
-    const placesRef = collection(db, 'users', user.uid, 'places');
-    const unsubscribe = onSnapshot(placesRef, (snapshot) => {
-      const places = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setSavedPlaces(places);
-      setPlacesLoading(false);
+    let unsubscribe = () => {};
 
-      // Update markers on map
-      const map = mapRef.current;
-      if (map) {
-        // Remove old saved markers
-        savedMarkersRef.current.forEach((m) => map.removeLayer(m));
-        savedMarkersRef.current = [];
-        // Add new ones
-        places.forEach((p) => {
-          const m = addMarkerToMap(map, p);
-          savedMarkersRef.current.push(m);
-        });
+    const init = async () => {
+      // Seed once per session
+      if (!seededRef.current) {
+        await seedDemoData(user.uid);
+        seededRef.current = true;
       }
-    }, (err) => {
-      console.error('Firestore sync error:', err);
-      setPlacesLoading(false);
-    });
 
+      // Subscribe to places
+      const placesRef = query(
+        collection(db, 'users', user.uid, 'places'),
+        orderBy('createdAt', 'desc')
+      );
+
+      unsubscribe = onSnapshot(placesRef, (snapshot) => {
+        const places = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setSavedPlaces(places);
+        setPlacesLoading(false);
+
+        // Sync markers on map
+        const map = mapRef.current;
+        if (map) {
+          markersRef.current.forEach((m) => map.removeLayer(m));
+          markersRef.current = [];
+          places.forEach((p) => {
+            const m = addMarkerToMap(map, p);
+            markersRef.current.push(m);
+          });
+        }
+      }, (err) => {
+        console.error('Firestore sync error:', err);
+        setPlacesLoading(false);
+      });
+    };
+
+    init();
     return () => unsubscribe();
   }, [user]);
 
@@ -124,21 +147,20 @@ export function AppProvider({ children }) {
   }, []);
   const hideCtxMenu = useCallback(() => setCtxMenu({ show: false, x: 0, y: 0 }), []);
 
-  // ── Map style ──
-  const applyMapFilter = useCallback((style) => {
-    const tp = document.querySelector('.leaflet-tile-pane');
-    if (tp) tp.style.filter = MAP_FILTERS[style] || MAP_FILTERS.dark;
-  }, []);
-
+  // ── Map style (swap MapTiler tile layer) ──
   const changeMapStyle = useCallback((style) => {
     setMapStyleState(style);
-    applyMapFilter(style);
-  }, [applyMapFilter]);
+    const map = mapRef.current;
+    const tl = tileLayerRef.current;
+    if (!map || !tl) return;
+    const url = TILE_URLS[style] || TILE_URLS.streets;
+    tl.setUrl(url);
+  }, []);
 
   const toggleSatellite = useCallback(() => {
     setSatOn(prev => {
       const next = !prev;
-      changeMapStyle(next ? 'satellite' : 'dark');
+      changeMapStyle(next ? 'satellite' : 'streets');
       return next;
     });
   }, [changeMapStyle]);
@@ -153,6 +175,8 @@ export function AppProvider({ children }) {
       ...place,
       lat: ll.lat,
       lng: ll.lng,
+      pinned: false,
+      tags: place.tags || [],
       createdAt: serverTimestamp(),
     };
 
@@ -178,6 +202,31 @@ export function AppProvider({ children }) {
     } catch (err) {
       console.error('Error deleting place:', err);
       showToast('❌ Failed to delete');
+    }
+  }, [user, showToast]);
+
+  // ── Toggle pin (Firestore) ──
+  const togglePin = useCallback(async (placeId, currentPinned) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'places', placeId), {
+        pinned: !currentPinned,
+      });
+      showToast(!currentPinned ? '📌 Pinned' : '📌 Unpinned', 'ok');
+    } catch (err) {
+      console.error('Error toggling pin:', err);
+    }
+  }, [user, showToast]);
+
+  // ── Update place (Firestore) ──
+  const updatePlace = useCallback(async (placeId, updates) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'places', placeId), updates);
+      showToast('✏️ Place updated', 'ok');
+    } catch (err) {
+      console.error('Error updating place:', err);
+      showToast('❌ Failed to update');
     }
   }, [user, showToast]);
 
@@ -280,13 +329,12 @@ export function AppProvider({ children }) {
     if (p.get('tab')) setActiveTab(p.get('tab'));
   }, [openAddModal, openAIModal]);
 
-  // ── Init map markers (demo places only — saved places handled by Firestore listener) ──
+  // ── Init map — no static markers, Firestore listener handles everything ──
   const initMarkers = useCallback((map) => {
-    DEMO_PLACES.forEach(p => addMarkerToMap(map, p));
-    // Also render any already-loaded saved places
+    // Re-render any already-loaded places when map initializes
     savedPlaces.forEach(p => {
       const m = addMarkerToMap(map, p);
-      savedMarkersRef.current.push(m);
+      markersRef.current.push(m);
     });
   }, [savedPlaces]);
 
@@ -298,9 +346,9 @@ export function AppProvider({ children }) {
     mapStyle, changeMapStyle, satOn, toggleSatellite,
     onboardVisible, setOnboardVisible,
     toasts, showToast,
-    savedPlaces, placesLoading, addPlace, deletePlace,
+    savedPlaces, placesLoading, addPlace, deletePlace, togglePin, updatePlace,
     flyTo, locateMe, dropPin, navigateTo, copyCoords,
-    applyMapFilter, initMarkers,
+    tileLayerRef, initMarkers,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

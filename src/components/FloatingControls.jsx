@@ -28,7 +28,7 @@ function TopBar() {
           ? { background: 'rgba(20,184,166,.18)', borderColor: 'rgba(20,184,166,.4)', color: '#14b8a6' }
           : { background: 'var(--color-glass)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderColor: 'var(--color-b2)' }
         }>
-        {satOn ? '🌑 Dark map' : <><Globe size={13} /> Satellite</>}
+        {satOn ? '🗺️ Streets' : <><Globe size={13} /> Satellite</>}
       </button>
       <button
         onClick={openAIModal}
