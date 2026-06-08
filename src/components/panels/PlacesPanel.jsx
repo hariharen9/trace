@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronRight, Pin, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { BADGE_STYLES } from '../../data';
+import { BADGE_STYLES, COLLECTIONS } from '../../data';
 
 function PlaceCard({ place, index }) {
   const { flyTo, deletePlace, togglePin } = useApp();
@@ -144,6 +144,28 @@ export default function PlacesPanel() {
             📌 Pinned · {pinned.length}
           </p>
           {pinned.map((p, i) => <PlaceCard key={p.id} place={p} index={i} />)}
+        </>
+      )}
+
+      {COLLECTIONS && COLLECTIONS.length > 0 && (
+        <>
+          <p className="font-mono text-[10px] font-medium tracking-[0.12em] text-t3 uppercase mt-5 mb-3 mx-1">
+            Collections
+          </p>
+          {COLLECTIONS.map(c => (
+            <div key={c.id} className="flex items-center gap-3 p-3 bg-elevated border border-b1 rounded-xl mb-2 cursor-pointer transition-all duration-200 hover:border-b2 hover:translate-x-0.5 animate-fade-in"
+              onClick={() => { switchTab('trips'); showToast(`📂 ${c.name}`); }}>
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
+                style={{ background: c.color }}>
+                {c.emoji}
+              </div>
+              <div>
+                <div className="font-semibold text-sm mb-0.5">{c.name}</div>
+                <div className="text-xs text-t3">{c.count}</div>
+              </div>
+              <ChevronRight size={16} className="ml-auto text-t3" />
+            </div>
+          ))}
         </>
       )}
 

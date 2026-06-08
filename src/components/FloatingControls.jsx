@@ -1,4 +1,4 @@
-import { Globe, Sparkles, Plus, Minus, Crosshair } from 'lucide-react';
+import { Globe, Sparkles, Plus, Minus, Crosshair, Compass } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { LEGEND_ITEMS } from '../data';
 
@@ -60,11 +60,17 @@ function BottomBar() {
   );
 }
 
-/* ── Zoom ── */
+/* ── Zoom & 3D Controls ── */
 function ZoomControls() {
   const { mapRef } = useApp();
   return (
     <div className="zoom-float fixed right-4 bottom-[140px] z-[800] flex flex-col gap-[5px]">
+      <button onClick={() => mapRef.current?.resetNorthPitch({ duration: 1000 })}
+        title="Reset 3D tilt & bearing"
+        className="w-9 h-9 mb-1 rounded-md border border-b2 text-t2 text-[17px] cursor-pointer transition-all duration-200 flex items-center justify-center hover:border-ba hover:text-ta"
+        style={{ background: 'var(--color-glass)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
+        <Compass size={17} />
+      </button>
       <button onClick={() => mapRef.current?.zoomIn()}
         className="w-9 h-9 rounded-md border border-b2 text-t2 text-[19px] cursor-pointer transition-all duration-200 flex items-center justify-center hover:border-ba hover:text-ta"
         style={{ background: 'var(--color-glass)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>

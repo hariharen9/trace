@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
+@import 'maplibre-gl/dist/maplibre-gl.css';
 
 @theme {
   --color-void: #07070d;
@@ -81,9 +81,9 @@
   .custom-scroll::-webkit-scrollbar-thumb { background: var(--color-b1); border-radius: 3px; }
   .custom-scroll { scrollbar-width: thin; scrollbar-color: var(--color-b1) transparent; }
 
-  /* ── LEAFLET OVERRIDES ── */
-  .leaflet-container { background: var(--color-void) !important; }
-  .leaflet-popup-content-wrapper {
+  /* ── MAPLIBRE OVERRIDES ── */
+  .maplibregl-map { background: var(--color-void) !important; }
+  .maplibregl-popup-content {
     background: var(--color-glass) !important;
     backdrop-filter: blur(24px) !important;
     -webkit-backdrop-filter: blur(24px) !important;
@@ -91,15 +91,16 @@
     border-radius: 22px !important;
     box-shadow: 0 20px 60px rgba(0,0,0,.65) !important;
     padding: 0 !important;
+    margin: 0 !important;
     overflow: hidden;
   }
-  .leaflet-popup-tip-container { display: none !important; }
-  .leaflet-popup-close-button {
+  .maplibregl-popup-tip { display: none !important; }
+  .maplibregl-popup-close-button {
     color: var(--color-t3) !important;
     top: 10px !important; right: 12px !important;
     font-size: 18px !important;
+    outline: none !important;
   }
-  .leaflet-popup-content { margin: 0 !important; }
 
   /* ── POPUP CONTENT (rendered as HTML strings, not JSX) ── */
   .popup-inner { padding: 17px 19px; min-width: 210px; }

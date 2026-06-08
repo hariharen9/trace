@@ -39,7 +39,8 @@ export default function TimelinePanel() {
             </div>
           </div>
         );
-      })}
+        return acc;
+      }, [])}
     </div>
   );
 }

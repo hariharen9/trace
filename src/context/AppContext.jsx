@@ -1,28 +1,26 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
-import L from 'leaflet';
+import maplibregl from 'maplibre-gl';
 import { collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './AuthContext';
 import { seedDemoData } from '../utils/seedData';
-const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY;
-const TILE_URLS = {
-  streets: `https://api.maptiler.com/maps/streets-v2-dark/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
-  dark: `https://api.maptiler.com/maps/streets-v2-dark/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
-  topo: `https://api.maptiler.com/maps/topo-v2/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
-  satellite: `https://api.maptiler.com/maps/hybrid/{z}/{x}/{y}.png?key=${MAPTILER_KEY}`,
-};
+import { MAP_STYLES } from '../components/MapView';
 
 const AppContext = createContext(null);
 // eslint-disable-next-line react-refresh/only-export-components
 export const useApp = () => useContext(AppContext);
 
-/* ── Leaflet helpers ── */
-function markerIcon(emoji, glow = false) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="font-size:24px;cursor:pointer;filter:drop-shadow(0 3px 9px rgba(0,0,0,.55))${glow ? ' drop-shadow(0 0 10px #6c63ff)' : ''};transition:transform .15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform=''">${emoji}</div>`,
-    iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -20],
-  });
+/* ── MapLibre helpers ── */
+function createMarkerElement(emoji, glow = false) {
+  const el = document.createElement('div');
+  el.style.fontSize = '24px';
+  el.style.cursor = 'pointer';
+  el.style.filter = `drop-shadow(0 3px 9px rgba(0,0,0,.55))${glow ? ' drop-shadow(0 0 10px #6c63ff)' : ''}`;
+  el.style.transition = 'transform .15s';
+  el.innerHTML = emoji;
+  el.addEventListener('mouseover', () => el.style.transform = 'scale(1.2)');
+  el.addEventListener('mouseout', () => el.style.transform = '');
+  return el;
 }
 
 function popupHTML(p) {
@@ -40,18 +38,26 @@ function popupHTML(p) {
   </div>`;
 }
 
+function closeAllPopups() {
+  const closeBtns = document.querySelectorAll('.maplibregl-popup-close-button');
+  closeBtns.forEach(b => b.click());
+}
+
 function addMarkerToMap(map, place, glow = false) {
-  const m = L.marker([place.lat, place.lng], { icon: markerIcon(place.emoji, glow) });
-  m.bindPopup(popupHTML(place), { maxWidth: 300 });
-  m.addTo(map);
-  return m;
+  const el = createMarkerElement(place.emoji, glow);
+  const popup = new maplibregl.Popup({ offset: [0, -10], maxWidth: '300px' })
+    .setHTML(popupHTML(place));
+    
+  return new maplibregl.Marker({ element: el })
+    .setLngLat([place.lng, place.lat])
+    .setPopup(popup)
+    .addTo(map);
 }
 
 /* ── Provider ── */
 export function AppProvider({ children }) {
   const { user } = useAuth();
   const mapRef = useRef(null);
-  const tileLayerRef = useRef(null);
   const userMarkerRef = useRef(null);
   const tempPinRef = useRef(null);
   const markersRef = useRef([]);
@@ -100,7 +106,7 @@ export function AppProvider({ children }) {
         // Sync markers on map
         const map = mapRef.current;
         if (map) {
-          markersRef.current.forEach((m) => map.removeLayer(m));
+          markersRef.current.forEach((m) => m.remove());
           markersRef.current = [];
           places.forEach((p) => {
             const m = addMarkerToMap(map, p);
@@ -119,8 +125,8 @@ export function AppProvider({ children }) {
 
   // ── Core actions ──
   const flyTo = useCallback((lat, lng, zoom = 16) => {
-    mapRef.current?.closePopup();
-    mapRef.current?.flyTo([lat, lng], zoom, { duration: 1.0, easeLinearity: 0.18 });
+    closeAllPopups();
+    mapRef.current?.flyTo({ center: [lng, lat], zoom, speed: 1.2 });
   }, []);
 
   const showToast = useCallback((msg, type = '') => {
@@ -147,14 +153,13 @@ export function AppProvider({ children }) {
   }, []);
   const hideCtxMenu = useCallback(() => setCtxMenu({ show: false, x: 0, y: 0 }), []);
 
-  // ── Map style (swap MapTiler tile layer) ──
+  // ── Map style (swap MapTiler style) ──
   const changeMapStyle = useCallback((style) => {
     setMapStyleState(style);
     const map = mapRef.current;
-    const tl = tileLayerRef.current;
-    if (!map || !tl) return;
-    const url = TILE_URLS[style] || TILE_URLS.streets;
-    tl.setUrl(url);
+    if (!map) return;
+    const url = MAP_STYLES[style] || MAP_STYLES.streets;
+    map.setStyle(url);
   }, []);
 
   const toggleSatellite = useCallback(() => {
@@ -169,7 +174,10 @@ export function AppProvider({ children }) {
   const addPlace = useCallback(async (place) => {
     const map = mapRef.current;
     if (!map || !user) return;
-    const ll = ctxLatLng || map.getCenter();
+    
+    // maplibre getCenter returns an object {lng, lat}
+    const center = map.getCenter();
+    const ll = ctxLatLng || { lat: center.lat, lng: center.lng };
 
     const newPlace = {
       ...place,
@@ -183,7 +191,7 @@ export function AppProvider({ children }) {
     try {
       const placesRef = collection(db, 'users', user.uid, 'places');
       await addDoc(placesRef, newPlace);
-      map.flyTo([ll.lat, ll.lng], 16, { duration: 0.8 });
+      map.flyTo({ center: [ll.lng, ll.lat], zoom: 16, speed: 1.2 });
       setCtxLatLng(null);
       closeAddModal();
       showToast(`${newPlace.emoji} "${newPlace.name}" saved`, 'ok');
@@ -234,9 +242,13 @@ export function AppProvider({ children }) {
   const dropPin = useCallback((latlng) => {
     const map = mapRef.current;
     if (!map || !latlng) return;
-    if (tempPinRef.current) map.removeLayer(tempPinRef.current);
-    tempPinRef.current = L.marker([latlng.lat, latlng.lng], { icon: markerIcon('📍') }).addTo(map);
-    map.flyTo([latlng.lat, latlng.lng], 15, { duration: 0.6 });
+    if (tempPinRef.current) tempPinRef.current.remove();
+    
+    tempPinRef.current = new maplibregl.Marker({ element: createMarkerElement('📍') })
+      .setLngLat([latlng.lng, latlng.lat])
+      .addTo(map);
+      
+    map.flyTo({ center: [latlng.lng, latlng.lat], zoom: 15, speed: 1.2 });
     showToast('📍 Pin dropped');
   }, [showToast]);
 
@@ -258,19 +270,25 @@ export function AppProvider({ children }) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
-        if (userMarkerRef.current) map.removeLayer(userMarkerRef.current);
-        userMarkerRef.current = L.marker([lat, lng], {
-          icon: L.divIcon({
-            className: '',
-            html: '<div style="width:14px;height:14px;border-radius:50%;background:#6c63ff;border:2.5px solid white;box-shadow:0 0 0 5px rgba(108,99,255,.25)"></div>',
-            iconSize: [14, 14], iconAnchor: [7, 7],
-          }),
-        }).addTo(map);
-        map.flyTo([lat, lng], 15, { duration: 0.9 });
+        if (userMarkerRef.current) userMarkerRef.current.remove();
+        
+        const el = document.createElement('div');
+        el.style.width = '14px';
+        el.style.height = '14px';
+        el.style.borderRadius = '50%';
+        el.style.background = '#6c63ff';
+        el.style.border = '2.5px solid white';
+        el.style.boxShadow = '0 0 0 5px rgba(108,99,255,.25)';
+        
+        userMarkerRef.current = new maplibregl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .addTo(map);
+          
+        map.flyTo({ center: [lng, lat], zoom: 15, speed: 1.2 });
         showToast('📍 You are here', 'ok');
       },
       () => {
-        map.flyTo([12.9716, 77.5946], 14, { duration: 0.9 });
+        map.flyTo({ center: [77.5946, 12.9716], zoom: 14, speed: 1.2 });
         showToast('📍 Location demo: Bengaluru');
       },
       { enableHighAccuracy: true, timeout: 7000 }
@@ -281,12 +299,12 @@ export function AppProvider({ children }) {
   useEffect(() => {
     window.__trace = {
       goJournal: (name) => {
-        mapRef.current?.closePopup();
+        closeAllPopups();
         setActiveTab('journal');
         showToast(`📓 Entry for ${name}`);
       },
       share: (name) => {
-        mapRef.current?.closePopup();
+        closeAllPopups();
         if (navigator.share) {
           navigator.share({ title: name, text: `Check out ${name} on TRACE`, url: location.href });
         } else {
@@ -295,7 +313,7 @@ export function AppProvider({ children }) {
         }
       },
       navigate: (lat, lng) => {
-        mapRef.current?.closePopup();
+        closeAllPopups();
         window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
       },
     };
@@ -348,7 +366,7 @@ export function AppProvider({ children }) {
     toasts, showToast,
     savedPlaces, placesLoading, addPlace, deletePlace, togglePin, updatePlace,
     flyTo, locateMe, dropPin, navigateTo, copyCoords,
-    tileLayerRef, initMarkers,
+    initMarkers,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
