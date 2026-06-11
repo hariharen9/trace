@@ -64,7 +64,9 @@ export function AppProvider({ children }) {
   const seededRef = useRef(false);
 
   const [activeTab, setActiveTab] = useState('places');
-  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [placeModalOpen, setPlaceModalOpen] = useState(false);
+  const [placeToEdit, setPlaceToEdit] = useState(null);
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [ctxMenu, setCtxMenu] = useState({ show: false, x: 0, y: 0 });
   const [ctxLatLng, setCtxLatLng] = useState(null);
@@ -74,16 +76,21 @@ export function AppProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const [savedPlaces, setSavedPlaces] = useState([]);
   const [placesLoading, setPlacesLoading] = useState(true);
+  const [collections, setCollections] = useState([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(true);
 
   // ── Seed demo data on first login, then subscribe to Firestore ──
   useEffect(() => {
     if (!user) {
       setSavedPlaces([]);
       setPlacesLoading(false);
+      setCollections([]);
+      setCollectionsLoading(false);
       return;
     }
 
-    let unsubscribe = () => {};
+    let unsubscribePlaces = () => {};
+    let unsubscribeCols = () => {};
 
     const init = async () => {
       // Seed once per session
@@ -98,7 +105,7 @@ export function AppProvider({ children }) {
         orderBy('createdAt', 'desc')
       );
 
-      unsubscribe = onSnapshot(placesRef, (snapshot) => {
+      unsubscribePlaces = onSnapshot(placesRef, (snapshot) => {
         const places = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
         setSavedPlaces(places);
         setPlacesLoading(false);
@@ -117,10 +124,28 @@ export function AppProvider({ children }) {
         console.error('Firestore sync error:', err);
         setPlacesLoading(false);
       });
+
+      // Subscribe to collections
+      const colsRef = query(
+        collection(db, 'users', user.uid, 'collections'),
+        orderBy('createdAt', 'desc')
+      );
+
+      unsubscribeCols = onSnapshot(colsRef, (snapshot) => {
+        const cols = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setCollections(cols);
+        setCollectionsLoading(false);
+      }, (err) => {
+        console.error('Firestore sync error (collections):', err);
+        setCollectionsLoading(false);
+      });
     };
 
     init();
-    return () => unsubscribe();
+    return () => {
+      unsubscribePlaces();
+      unsubscribeCols();
+    };
   }, [user]);
 
   // ── Core actions ──
@@ -138,11 +163,19 @@ export function AppProvider({ children }) {
   const switchTab = useCallback((panel) => setActiveTab(panel), []);
 
   // ── Modal controls ──
-  const openAddModal = useCallback((latlng) => {
+  const openPlaceModal = useCallback((latlng = null, place = null) => {
     if (latlng) setCtxLatLng(latlng);
-    setAddModalOpen(true);
+    setPlaceToEdit(place);
+    setPlaceModalOpen(true);
   }, []);
-  const closeAddModal = useCallback(() => { setAddModalOpen(false); }, []);
+  const closePlaceModal = useCallback(() => { 
+    setPlaceModalOpen(false); 
+    setPlaceToEdit(null);
+  }, []);
+  
+  const openCollectionModal = useCallback(() => setCollectionModalOpen(true), []);
+  const closeCollectionModal = useCallback(() => setCollectionModalOpen(false), []);
+
   const openAIModal = useCallback(() => setAiModalOpen(true), []);
   const closeAIModal = useCallback(() => setAiModalOpen(false), []);
 
@@ -193,13 +226,13 @@ export function AppProvider({ children }) {
       await addDoc(placesRef, newPlace);
       map.flyTo({ center: [ll.lng, ll.lat], zoom: 16, speed: 1.2 });
       setCtxLatLng(null);
-      closeAddModal();
+      closePlaceModal();
       showToast(`${newPlace.emoji} "${newPlace.name}" saved`, 'ok');
     } catch (err) {
       console.error('Error saving place:', err);
       showToast('❌ Failed to save place');
     }
-  }, [user, ctxLatLng, closeAddModal, showToast]);
+  }, [user, ctxLatLng, closePlaceModal, showToast]);
 
   // ── Delete place (Firestore) ──
   const deletePlace = useCallback(async (placeId) => {
@@ -231,10 +264,36 @@ export function AppProvider({ children }) {
     if (!user) return;
     try {
       await updateDoc(doc(db, 'users', user.uid, 'places', placeId), updates);
+      closePlaceModal();
       showToast('✏️ Place updated', 'ok');
     } catch (err) {
       console.error('Error updating place:', err);
       showToast('❌ Failed to update');
+    }
+  }, [user, closePlaceModal, showToast]);
+
+  // ── Collection actions ──
+  const addCollection = useCallback(async (col) => {
+    if (!user) return;
+    try {
+      const colRef = collection(db, 'users', user.uid, 'collections');
+      await addDoc(colRef, { ...col, createdAt: serverTimestamp() });
+      closeCollectionModal();
+      showToast(`📁 Collection created`, 'ok');
+    } catch (err) {
+      console.error('Error saving collection:', err);
+      showToast('❌ Failed to save collection');
+    }
+  }, [user, closeCollectionModal, showToast]);
+
+  const deleteCollection = useCallback(async (colId) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'collections', colId));
+      showToast('🗑️ Collection removed', 'ok');
+    } catch (err) {
+      console.error('Error deleting collection:', err);
+      showToast('❌ Failed to delete collection');
     }
   }, [user, showToast]);
 
@@ -327,25 +386,26 @@ export function AppProvider({ children }) {
         e.preventDefault();
         openAIModal();
       } else if (e.key === 'Escape') {
-        closeAddModal();
+        closePlaceModal();
+        closeCollectionModal();
         closeAIModal();
         hideCtxMenu();
       } else if (e.key === 'n' && !e.target.matches('input, textarea')) {
-        openAddModal();
+        openPlaceModal();
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [openAIModal, closeAddModal, closeAIModal, hideCtxMenu, openAddModal]);
+  }, [openAIModal, closePlaceModal, closeCollectionModal, closeAIModal, hideCtxMenu, openPlaceModal]);
 
   // ── URL params on mount ──
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (p.get('action') === 'add') openAddModal();
+    if (p.get('action') === 'add') openPlaceModal();
     if (p.get('action') === 'search') openAIModal();
     if (p.get('tab')) setActiveTab(p.get('tab'));
-  }, [openAddModal, openAIModal]);
+  }, [openPlaceModal, openAIModal]);
 
   // ── Init map — no static markers, Firestore listener handles everything ──
   const initMarkers = useCallback((map) => {
@@ -358,13 +418,15 @@ export function AppProvider({ children }) {
 
   const value = {
     mapRef, activeTab, switchTab,
-    addModalOpen, openAddModal, closeAddModal,
+    placeModalOpen, placeToEdit, openPlaceModal, closePlaceModal,
+    collectionModalOpen, openCollectionModal, closeCollectionModal,
     aiModalOpen, openAIModal, closeAIModal,
     ctxMenu, ctxLatLng, showCtxMenu, hideCtxMenu,
     mapStyle, changeMapStyle, satOn, toggleSatellite,
     onboardVisible, setOnboardVisible,
     toasts, showToast,
     savedPlaces, placesLoading, addPlace, deletePlace, togglePin, updatePlace,
+    collections, collectionsLoading, addCollection, deleteCollection,
     flyTo, locateMe, dropPin, navigateTo, copyCoords,
     initMarkers,
   };

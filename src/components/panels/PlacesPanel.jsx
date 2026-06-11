@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { ChevronRight, Pin, Trash2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { ChevronRight, Pin, Trash2, Edit2, Search, Plus, Filter } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { BADGE_STYLES, COLLECTIONS } from '../../data';
+import { BADGE_STYLES, CATEGORY_OPTIONS } from '../../data';
 
 function PlaceCard({ place, index }) {
-  const { flyTo, deletePlace, togglePin } = useApp();
+  const { flyTo, deletePlace, togglePin, openPlaceModal } = useApp();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const badge = BADGE_STYLES[place.category] || BADGE_STYLES['Memory'];
 
@@ -21,6 +21,11 @@ function PlaceCard({ place, index }) {
   const handlePin = (e) => {
     e.stopPropagation();
     togglePin(place.id, place.pinned);
+  };
+
+  const handleEdit = (e) => {
+    e.stopPropagation();
+    openPlaceModal(null, place);
   };
 
   return (
@@ -74,6 +79,13 @@ function PlaceCard({ place, index }) {
           <Pin size={11} />
           {place.pinned ? 'Pinned' : 'Pin'}
         </button>
+        <button
+          onClick={handleEdit}
+          className="flex items-center gap-1 py-1.5 px-2.5 rounded-lg text-[10px] font-medium cursor-pointer transition-all duration-150 border bg-transparent border-b1 text-t3 hover:border-b2 hover:text-t2"
+          title="Edit">
+          <Edit2 size={11} />
+          Edit
+        </button>
         <div className="flex-1" />
         <button
           onClick={handleDelete}
@@ -109,8 +121,7 @@ function LoadingSkeleton() {
   );
 }
 
-function EmptyState() {
-  const { openAddModal } = useApp();
+function EmptyState({ openPlaceModal }) {
   return (
     <div className="text-center py-12 px-4">
       <div className="text-4xl mb-4">📍</div>
@@ -119,7 +130,7 @@ function EmptyState() {
         Right-click the map to save your first place,<br />or press <strong className="text-ta">N</strong> to add one.
       </p>
       <button
-        onClick={() => openAddModal()}
+        onClick={() => openPlaceModal()}
         className="py-2 px-5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-150 border border-ba bg-pglow text-ta hover:bg-primary hover:text-white hover:border-primary">
         + Add a place
       </button>
@@ -128,55 +139,185 @@ function EmptyState() {
 }
 
 export default function PlacesPanel() {
-  const { savedPlaces, placesLoading } = useApp();
+  const { savedPlaces, placesLoading, collections, collectionsLoading, openPlaceModal, openCollectionModal, deleteCollection, showToast } = useApp();
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [sortBy, setSortBy] = useState('recent'); // 'recent', 'oldest', 'alpha'
+  const [selectedCollectionId, setSelectedCollectionId] = useState(null);
 
-  if (placesLoading) return <LoadingSkeleton />;
-  if (savedPlaces.length === 0) return <EmptyState />;
+  const filteredPlaces = useMemo(() => {
+    let result = [...savedPlaces];
 
-  const pinned = savedPlaces.filter(p => p.pinned);
-  const recent = savedPlaces.filter(p => !p.pinned);
+    // Search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(p => p.name.toLowerCase().includes(q) || p.addr.toLowerCase().includes(q));
+    }
+
+    // Category Filter
+    if (categoryFilter !== 'All') {
+      result = result.filter(p => p.category === categoryFilter);
+    }
+
+    // Collection Filter
+    if (selectedCollectionId) {
+      result = result.filter(p => p.collectionId === selectedCollectionId);
+    }
+
+    // Sort
+    if (sortBy === 'oldest') {
+      result.sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+    } else if (sortBy === 'alpha') {
+      result.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      // recent (default from firestore)
+      result.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+    }
+
+    return result;
+  }, [savedPlaces, searchQuery, categoryFilter, sortBy, selectedCollectionId]);
+
+  if (placesLoading || collectionsLoading) return <LoadingSkeleton />;
+  if (savedPlaces.length === 0 && !searchQuery && categoryFilter === 'All' && !selectedCollectionId) {
+     return <EmptyState openPlaceModal={openPlaceModal} />;
+  }
+
+  const isFiltering = searchQuery || categoryFilter !== 'All' || selectedCollectionId || sortBy !== 'recent';
 
   return (
-    <>
-      {pinned.length > 0 && (
-        <>
-          <p className="font-mono text-[10px] font-medium tracking-[0.12em] text-t3 uppercase mt-2 mb-3 mx-1">
-            📌 Pinned · {pinned.length}
-          </p>
-          {pinned.map((p, i) => <PlaceCard key={p.id} place={p} index={i} />)}
-        </>
+    <div className="flex flex-col h-full overflow-visible">
+      {/* Top Controls */}
+      <div className="sticky top-0 bg-[#0d0d18] z-10 pb-4 mb-2 border-b border-b1">
+        <div className="relative mb-3 mt-1">
+          <Filter size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-t3" />
+          <input 
+            type="text" 
+            placeholder="Filter saved places..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-elevated border border-b1 rounded-lg py-2 pl-8 pr-4 text-xs outline-none focus:border-primary transition-colors placeholder:text-t3"
+          />
+        </div>
+        
+        <div className="flex gap-2">
+          <select 
+            value={categoryFilter} 
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="bg-layer border border-b1 rounded-lg py-1.5 px-3 text-xs text-t2 outline-none flex-1 cursor-pointer"
+          >
+            <option value="All">All Categories</option>
+            {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+
+          <select 
+            value={sortBy} 
+            onChange={(e) => setSortBy(e.target.value)}
+            className="bg-layer border border-b1 rounded-lg py-1.5 px-3 text-xs text-t2 outline-none flex-1 cursor-pointer"
+          >
+            <option value="recent">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="alpha">A-Z</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Selected Collection Header (if any) */}
+      {selectedCollectionId && (
+        <div className="flex items-center justify-between bg-[rgba(108,99,255,0.1)] border border-[rgba(108,99,255,0.2)] rounded-xl p-3 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{collections.find(c => c.id === selectedCollectionId)?.emoji}</span>
+            <span className="font-semibold text-sm text-ta">{collections.find(c => c.id === selectedCollectionId)?.name}</span>
+          </div>
+          <button 
+            onClick={() => setSelectedCollectionId(null)}
+            className="text-xs text-primary hover:underline"
+          >
+            Clear Filter
+          </button>
+        </div>
       )}
 
-      {COLLECTIONS && COLLECTIONS.length > 0 && (
-        <>
-          <p className="font-mono text-[10px] font-medium tracking-[0.12em] text-t3 uppercase mt-5 mb-3 mx-1">
-            Collections
-          </p>
-          {COLLECTIONS.map(c => (
-            <div key={c.id} className="flex items-center gap-3 p-3 bg-elevated border border-b1 rounded-xl mb-2 cursor-pointer transition-all duration-200 hover:border-b2 hover:translate-x-0.5 animate-fade-in"
-              onClick={() => { switchTab('trips'); showToast(`📂 ${c.name}`); }}>
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
-                style={{ background: c.color }}>
-                {c.emoji}
-              </div>
-              <div>
-                <div className="font-semibold text-sm mb-0.5">{c.name}</div>
-                <div className="text-xs text-t3">{c.count}</div>
-              </div>
-              <ChevronRight size={16} className="ml-auto text-t3" />
+      {/* List Content */}
+      <div className="flex-1 overflow-visible">
+        {isFiltering ? (
+          <>
+            <p className="font-mono text-[10px] font-medium tracking-[0.12em] text-t3 uppercase mb-3 mx-1">
+              Results · {filteredPlaces.length}
+            </p>
+            {filteredPlaces.map((p, i) => <PlaceCard key={p.id} place={p} index={i} />)}
+            {filteredPlaces.length === 0 && (
+              <div className="text-center py-8 text-t3 text-xs">No places match your filters.</div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Standard View */}
+            {filteredPlaces.filter(p => p.pinned).length > 0 && (
+              <>
+                <p className="font-mono text-[10px] font-medium tracking-[0.12em] text-t3 uppercase mt-2 mb-3 mx-1">
+                  📌 Pinned · {filteredPlaces.filter(p => p.pinned).length}
+                </p>
+                {filteredPlaces.filter(p => p.pinned).map((p, i) => <PlaceCard key={p.id} place={p} index={i} />)}
+              </>
+            )}
+
+            {/* Collections Block */}
+            <div className="mt-5 mb-3 mx-1 flex items-center justify-between">
+              <p className="font-mono text-[10px] font-medium tracking-[0.12em] text-t3 uppercase">
+                Collections
+              </p>
+              <button 
+                onClick={openCollectionModal}
+                className="text-[10px] font-semibold text-primary hover:text-ta transition-colors flex items-center gap-1"
+              >
+                <Plus size={10} /> NEW
+              </button>
             </div>
-          ))}
-        </>
-      )}
+            
+            {collections.length === 0 ? (
+              <div className="text-center py-4 bg-elevated border border-b1 rounded-xl text-xs text-t3 mb-2">
+                Create a collection to organize your places.
+              </div>
+            ) : (
+              collections.map(c => {
+                const count = savedPlaces.filter(p => p.collectionId === c.id).length;
+                return (
+                  <div key={c.id} className="flex items-center gap-3 p-3 bg-elevated border border-b1 rounded-xl mb-2 cursor-pointer transition-all duration-200 hover:border-b2 hover:translate-x-0.5 animate-fade-in group"
+                    onClick={() => { setSelectedCollectionId(c.id); showToast(`Viewing ${c.name}`); }}>
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
+                      style={{ background: c.color }}>
+                      {c.emoji}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm mb-0.5">{c.name}</div>
+                      <div className="text-xs text-t3">{count} {count === 1 ? 'place' : 'places'}</div>
+                    </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); deleteCollection(c.id); }}
+                      className="p-1.5 text-t3 hover:text-rose opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete Collection"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <ChevronRight size={16} className="text-t3" />
+                  </div>
+                );
+              })
+            )}
 
-      {recent.length > 0 && (
-        <>
-          <p className="font-mono text-[10px] font-medium tracking-[0.12em] text-t3 uppercase mt-5 mb-3 mx-1">
-            Recent · {recent.length}
-          </p>
-          {recent.map((p, i) => <PlaceCard key={p.id} place={p} index={i} />)}
-        </>
-      )}
-    </>
+            {/* Recent Block */}
+            {filteredPlaces.filter(p => !p.pinned).length > 0 && (
+              <>
+                <p className="font-mono text-[10px] font-medium tracking-[0.12em] text-t3 uppercase mt-5 mb-3 mx-1">
+                  Recent · {filteredPlaces.filter(p => !p.pinned).length}
+                </p>
+                {filteredPlaces.filter(p => !p.pinned).map((p, i) => <PlaceCard key={p.id} place={p} index={i} />)}
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }

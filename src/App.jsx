@@ -4,7 +4,8 @@ import LoginScreen from './components/LoginScreen'
 import Sidebar from './components/Sidebar'
 import MapView from './components/MapView'
 import FloatingControls from './components/FloatingControls'
-import AddPlaceModal from './components/AddPlaceModal'
+import PlaceModal from './components/PlaceModal'
+import CollectionModal from './components/CollectionModal'
 import AISearchModal from './components/AISearchModal'
 import ContextMenu from './components/ContextMenu'
 import ToastContainer from './components/ToastContainer'
@@ -43,7 +44,8 @@ function AppContent() {
         </div>
       </div>
       <FloatingControls />
-      <AddPlaceModal />
+      <PlaceModal />
+      <CollectionModal />
       <AISearchModal />
       <ContextMenu />
       <ToastContainer />

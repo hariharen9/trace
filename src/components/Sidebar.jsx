@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Search, Plus, LogOut, Radio, MapPin, Activity, Plane, BookOpen, BarChart3 } from 'lucide-react';
+import { Map, MapPin, Search, CalendarDays, BookOpen, BarChart3, Plus, Sparkles } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { INLINE_SUGGESTIONS } from '../data';
@@ -20,7 +20,7 @@ const TABS = [
 const PANELS = { places: PlacesPanel, timeline: TimelinePanel, trips: TripsPanel, journal: JournalPanel, stats: StatsPanel };
 
 export default function Sidebar() {
-  const { activeTab, switchTab, openAddModal, showToast, flyTo } = useApp();
+  const { activeTab, switchTab, openPlaceModal, showToast, flyTo } = useApp();
   const { user, signOut } = useAuth();
   const [searchValue, setSearchValue] = useState('');
   const [showInline, setShowInline] = useState(false);
@@ -71,7 +71,7 @@ export default function Sidebar() {
           TRACE
         </div>
         <div className="flex gap-2">
-          <button onClick={() => openAddModal()} className="w-9 h-9 rounded-lg bg-elevated border border-b1 text-t3 flex items-center justify-center cursor-pointer transition-all duration-200 hover:border-b2 hover:text-t1 shrink-0" title="New place">
+          <button onClick={() => openPlaceModal()} className="w-9 h-9 rounded-lg bg-elevated border border-b1 text-t3 flex items-center justify-center cursor-pointer transition-all duration-200 hover:border-b2 hover:text-t1 shrink-0" title="New place">
             <Plus size={16} strokeWidth={2.2} />
           </button>
           <button onClick={signOut} className="w-9 h-9 rounded-lg bg-elevated border border-b1 text-t3 flex items-center justify-center cursor-pointer transition-all duration-200 hover:border-b2 hover:text-rose shrink-0" title="Sign out">
@@ -97,11 +97,11 @@ export default function Sidebar() {
       )}
 
       {/* ── Command input ── */}
-      <div className="inline-search-area px-6 pt-4 pb-4 relative">
-        <Search size={15} className="absolute left-9 top-1/2 -translate-y-1/2 text-t3 pointer-events-none" />
+      <div className="inline-search-area px-6 pt-4 pb-4 relative group">
+        <Sparkles size={15} className="absolute left-9 top-1/2 -translate-y-1/2 text-ta transition-transform group-focus-within:scale-110" />
         <input
           className="w-full bg-elevated border border-b1 rounded-full py-2.5 pr-16 pl-10 text-t1 font-body text-sm outline-none transition-all duration-200 focus:border-ba focus:shadow-[0_0_0_3px_var(--color-pglow)] placeholder:text-t3"
-          placeholder="Search places, memories, vibes…"
+          placeholder="Ask AI or search mapz..."
           autoComplete="off"
           value={searchValue}
           onFocus={handleFocus}
@@ -109,7 +109,7 @@ export default function Sidebar() {
         />
         <span className="absolute right-9 top-1/2 -translate-y-1/2 rounded-full py-0.5 px-2 text-[10px] font-semibold tracking-[0.05em] text-white pointer-events-none"
           style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))' }}>
-          AI
+          ⌘K
         </span>
 
         {/* Inline AI results dropdown */}

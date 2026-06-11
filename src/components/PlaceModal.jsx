@@ -2,46 +2,58 @@ import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { EMOJI_OPTIONS, CATEGORY_OPTIONS, VIBE_OPTIONS } from '../data';
 
-export default function AddPlaceModal() {
-  const { addModalOpen, closeAddModal, addPlace, ctxLatLng } = useApp();
+export default function PlaceModal() {
+  const { placeModalOpen, closePlaceModal, addPlace, updatePlace, ctxLatLng, placeToEdit, collections } = useApp();
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
   const [addr, setAddr] = useState('');
   const [emoji, setEmoji] = useState('☕');
   const [category, setCategory] = useState('Café');
   const [vibe, setVibe] = useState('');
+  const [collectionId, setCollectionId] = useState('');
   const [nameError, setNameError] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
   const nameRef = useRef(null);
 
   // Reset form + reverse geocode when opened
   useEffect(() => {
-    if (addModalOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setName(''); setNote(''); setAddr(''); setEmoji('☕'); setCategory('Café'); setVibe(''); setNameError(false);
-      setTimeout(() => nameRef.current?.focus(), 150);
+    if (placeModalOpen) {
+      if (placeToEdit) {
+        setName(placeToEdit.name || '');
+        setNote(placeToEdit.note || '');
+        setAddr(placeToEdit.addr || '');
+        setEmoji(placeToEdit.emoji || '☕');
+        setCategory(placeToEdit.category || 'Café');
+        setVibe(placeToEdit.vibe || '');
+        setCollectionId(placeToEdit.collectionId || '');
+        setNameError(false);
+        setTimeout(() => nameRef.current?.focus(), 150);
+      } else {
+        setName(''); setNote(''); setAddr(''); setEmoji('☕'); setCategory('Café'); setVibe(''); setCollectionId(''); setNameError(false);
+        setTimeout(() => nameRef.current?.focus(), 150);
 
-      // Reverse geocode if we have coordinates
-      if (ctxLatLng) {
-        setGeoLoading(true);
-        setAddr(`${ctxLatLng.lat.toFixed(5)}, ${ctxLatLng.lng.toFixed(5)}`);
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${ctxLatLng.lat}&lon=${ctxLatLng.lng}&zoom=18&addressdetails=1`, {
-          headers: { 'Accept-Language': 'en' },
-        })
-          .then(r => r.json())
-          .then(data => {
-            if (data?.display_name) {
-              // Shorten: take first 2-3 meaningful parts
-              const parts = data.display_name.split(', ');
-              const short = parts.slice(0, 3).join(', ');
-              setAddr(short);
-            }
+        // Reverse geocode if we have coordinates
+        if (ctxLatLng) {
+          setGeoLoading(true);
+          setAddr(`${ctxLatLng.lat.toFixed(5)}, ${ctxLatLng.lng.toFixed(5)}`);
+          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${ctxLatLng.lat}&lon=${ctxLatLng.lng}&zoom=18&addressdetails=1`, {
+            headers: { 'Accept-Language': 'en' },
           })
-          .catch(() => { /* keep coordinate fallback */ })
-          .finally(() => setGeoLoading(false));
+            .then(r => r.json())
+            .then(data => {
+              if (data?.display_name) {
+                // Shorten: take first 2-3 meaningful parts
+                const parts = data.display_name.split(', ');
+                const short = parts.slice(0, 3).join(', ');
+                setAddr(short);
+              }
+            })
+            .catch(() => { /* keep coordinate fallback */ })
+            .finally(() => setGeoLoading(false));
+        }
       }
     }
-  }, [addModalOpen, ctxLatLng]);
+  }, [placeModalOpen, ctxLatLng, placeToEdit]);
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -50,31 +62,38 @@ export default function AddPlaceModal() {
       setTimeout(() => setNameError(false), 1400);
       return;
     }
-    addPlace({
+    const payload = {
       emoji,
       name: name.trim(),
       addr: addr.trim() || 'Saved location',
       note: note.trim(),
       category,
       vibe,
-    });
+      collectionId: collectionId || null,
+    };
+
+    if (placeToEdit) {
+      updatePlace(placeToEdit.id, payload);
+    } else {
+      addPlace(payload);
+    }
   };
 
-  if (!addModalOpen) return null;
+  if (!placeModalOpen) return null;
 
   return (
     <div
-      className={`modal-open fixed inset-0 z-[600] flex items-center justify-center transition-opacity duration-200 ${addModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      className={`modal-open fixed inset-0 z-[600] flex items-center justify-center transition-opacity duration-200 ${placeModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       style={{ background: 'rgba(7,7,13,0.82)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) closeAddModal(); }}
+      onClick={(e) => { if (e.target === e.currentTarget) closePlaceModal(); }}
     >
       <div className="modal-panel bg-layer border border-b2 rounded-2xl w-[520px] max-w-[calc(100vw-32px)] max-h-[90vh] overflow-y-auto"
         style={{ boxShadow: '0 36px 100px rgba(0,0,0,.7)' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between p-8 pb-0 mb-6">
-          <div className="font-display text-lg font-bold">Save a place</div>
-          <button onClick={closeAddModal}
+          <div className="font-display text-lg font-bold">{placeToEdit ? 'Edit place' : 'Save a place'}</div>
+          <button onClick={closePlaceModal}
             className="w-8 h-8 rounded-lg bg-elevated border border-b1 text-t3 flex items-center justify-center cursor-pointer transition-all duration-150 text-lg leading-none hover:text-t1 hover:border-b2">
             ×
           </button>
@@ -85,12 +104,19 @@ export default function AddPlaceModal() {
           {/* Emoji picker */}
           <div className="mb-5">
             <label className="font-mono text-[10px] tracking-[0.1em] uppercase text-t3 mb-2 block">Emoji</label>
-            <div className="flex gap-2 flex-wrap">
-              {EMOJI_OPTIONS.map(e => (
-                <div key={e} onClick={() => setEmoji(e)}
-                  className={`w-10 h-10 rounded-lg bg-elevated text-lg cursor-pointer flex items-center justify-center transition-all duration-150 border-2 hover:bg-surface hover:border-b1
-                    ${emoji === e ? 'border-primary bg-pglow' : 'border-transparent'}`}>
-                  {e}
+            <div className="max-h-[140px] overflow-y-auto pr-2 custom-scrollbar bg-[rgba(12,12,22,0.3)] border border-b1 rounded-xl p-3">
+              {EMOJI_OPTIONS.map((group) => (
+                <div key={group.group} className="mb-3 last:mb-0">
+                  <div className="text-[10px] text-t3 font-medium mb-1.5 pl-1">{group.group}</div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {group.emojis.map(e => (
+                      <div key={e} onClick={() => setEmoji(e)}
+                        className={`w-8 h-8 rounded-lg bg-elevated text-[15px] cursor-pointer flex items-center justify-center transition-all duration-150 border hover:bg-surface hover:border-b1
+                          ${emoji === e ? 'border-primary bg-pglow scale-110 shadow-sm z-10' : 'border-transparent'}`}>
+                        {e}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
@@ -105,7 +131,7 @@ export default function AddPlaceModal() {
               placeholder="What is this place?" />
           </div>
 
-          {/* Address (auto-filled via reverse geocoding) */}
+          {/* Address */}
           <div className="mb-5">
             <label className="font-mono text-[10px] tracking-[0.1em] uppercase text-t3 mb-2 flex items-center gap-2">
               Address
@@ -129,6 +155,27 @@ export default function AddPlaceModal() {
               ))}
             </div>
           </div>
+
+          {/* Collection */}
+          {collections.length > 0 && (
+            <div className="mb-5">
+              <label className="font-mono text-[10px] tracking-[0.1em] uppercase text-t3 mb-2 block">Collection</label>
+              <div className="flex gap-2 flex-wrap">
+                <div onClick={() => setCollectionId('')}
+                  className={`py-2 px-4 rounded-full text-xs cursor-pointer transition-all duration-150 border
+                    ${!collectionId ? 'bg-pglow border-ba text-ta' : 'bg-elevated border-b1 text-t2 hover:border-b2'}`}>
+                  None
+                </div>
+                {collections.map(c => (
+                  <div key={c.id} onClick={() => setCollectionId(c.id)}
+                    className={`py-2 px-4 rounded-full text-xs cursor-pointer transition-all duration-150 border flex items-center gap-1.5
+                      ${collectionId === c.id ? 'bg-pglow border-ba text-ta' : 'bg-elevated border-b1 text-t2 hover:border-b2'}`}>
+                    <span>{c.emoji}</span> {c.name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Note */}
           <div className="mb-5">
@@ -154,13 +201,13 @@ export default function AddPlaceModal() {
 
           {/* Footer */}
           <div className="flex gap-3 justify-end pt-5 border-t border-b1 mt-2">
-            <button onClick={closeAddModal}
+            <button onClick={closePlaceModal}
               className="py-2.5 px-5 rounded-lg font-body text-sm font-medium cursor-pointer transition-all duration-150 border border-b1 bg-transparent text-t2 hover:bg-elevated hover:text-t1">
               Cancel
             </button>
             <button onClick={handleSave}
               className="py-2.5 px-5 rounded-lg font-body text-sm font-medium cursor-pointer transition-all duration-150 border border-transparent bg-primary text-white hover:bg-[#5a52dd] hover:-translate-y-px">
-              Save place
+              {placeToEdit ? 'Update place' : 'Save place'}
             </button>
           </div>
         </div>

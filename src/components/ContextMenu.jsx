@@ -3,7 +3,7 @@ import { MapPin, BookOpen, MapPinned, Navigation, Copy } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function ContextMenu() {
-  const { ctxMenu, ctxLatLng, hideCtxMenu, openAddModal, switchTab, showToast, dropPin, navigateTo, copyCoords } = useApp();
+  const { ctxMenu, ctxLatLng, hideCtxMenu, openPlaceModal, switchTab, showToast, dropPin, navigateTo, copyCoords } = useApp();
   const menuRef = useRef(null);
 
   // Close on outside click
@@ -24,7 +24,7 @@ export default function ContextMenu() {
   const y = Math.min(ctxMenu.y, window.innerHeight - mh - 16);
 
   const items = [
-    { Icon: MapPin, label: 'Save this place', action: () => { hideCtxMenu(); openAddModal(ctxLatLng); } },
+    { Icon: MapPin, label: 'Save this place', action: () => { hideCtxMenu(); openPlaceModal(ctxLatLng); } },
     { Icon: BookOpen, label: 'Journal entry here', action: () => { hideCtxMenu(); switchTab('journal'); showToast('📓 New entry started'); } },
     { Icon: MapPinned, label: 'Drop a pin', action: () => { hideCtxMenu(); dropPin(ctxLatLng); } },
     'sep',

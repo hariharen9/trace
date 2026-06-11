@@ -106,7 +106,12 @@ export const QUICK_PROMPTS = [
   { emoji: '💎', label: 'Hidden gems', query: 'Hidden gems Bengaluru' },
 ];
 
-export const EMOJI_OPTIONS = ['☕', '🍛', '🌅', '🎮', '🏖️', '📍', '💼', '🌿', '🎵', '📚', '🍺', '💍'];
+export const EMOJI_OPTIONS = [
+  { group: 'Food & Drink', emojis: ['☕', '🍛', '🍺', '🍷', '🍔', '🍕', '🍜', '🍦', '🥂', '🥐'] },
+  { group: 'Nature & Places', emojis: ['🌅', '🌿', '🌲', '🏕️', '🏖️', '🌊', '🏔️', '⛩️', '🏰'] },
+  { group: 'Activities', emojis: ['🎮', '🎵', '📚', '🎬', '🎟️', '🚲', '⚽', '🎸'] },
+  { group: 'Life & Work', emojis: ['💼', '💻', '🎓', '💍', '❤️', '🎉', '💡', '🏡', '🏠', '📍', '✈️', '📁'] }
+];
 export const CATEGORY_OPTIONS = ['Café', 'Food', 'Memory', 'Work', 'Photo spot', 'Hidden gem', 'Date spot'];
 export const VIBE_OPTIONS = ['😄 Joyful', '🧘 Peaceful', '💻 Productive', '🌊 Adventure', '🫀 Emotional', '🚀 Energized'];
 
