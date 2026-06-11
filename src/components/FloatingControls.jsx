@@ -1,6 +1,5 @@
 import { Globe, Plus, Minus, Crosshair, Compass, Search } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { LEGEND_ITEMS } from '../data';
 
 export default function FloatingControls() {
   return (
@@ -9,7 +8,6 @@ export default function FloatingControls() {
       <BottomBar />
       <ZoomControls />
       <GeoButton />
-      <MapLegend />
       <OnboardChip />
     </>
   );
@@ -97,18 +95,6 @@ function GeoButton() {
   );
 }
 
-/* ── Map Legend ── */
-function MapLegend() {
-  return (
-    <div className="legend-float fixed left-[calc(340px+12px)] bottom-[70px] z-[800] border border-b1 rounded-lg py-2 px-[13px] flex gap-[11px] items-center"
-      style={{ background: 'var(--color-glass)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
-      <span className="font-mono text-[9px] tracking-[0.1em] text-t3 uppercase">Legend</span>
-      {LEGEND_ITEMS.map(item => (
-        <span key={item.label} className="text-xs text-t2">{item.emoji} {item.label}</span>
-      ))}
-    </div>
-  );
-}
 
 /* ── Onboard Chip ── */
 function OnboardChip() {

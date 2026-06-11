@@ -96,13 +96,6 @@ export const EMOJI_OPTIONS = [
 export const CATEGORY_OPTIONS = ['Café', 'Food', 'Memory', 'Work', 'Photo spot', 'Hidden gem', 'Date spot'];
 export const VIBE_OPTIONS = ['😄 Joyful', '🧘 Peaceful', '💻 Productive', '🌊 Adventure', '🫀 Emotional', '🚀 Energized'];
 
-export const LEGEND_ITEMS = [
-  { emoji: '☕', label: 'Café' },
-  { emoji: '🍛', label: 'Food' },
-  { emoji: '💍', label: 'Memory' },
-  { emoji: '🌅', label: 'Photo' },
-  { emoji: '📍', label: 'Pin' },
-];
 
 export const MAP_FILTERS = {
   dark: 'invert(1) hue-rotate(180deg) brightness(0.68) saturate(0.52) contrast(1.15)',
