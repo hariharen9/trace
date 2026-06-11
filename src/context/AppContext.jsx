@@ -75,6 +75,7 @@ export function AppProvider({ children }) {
   const seededRef = useRef(false);
 
   const [activeTab, setActiveTab] = useState('places');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [placeModalOpen, setPlaceModalOpen] = useState(false);
   const [placeToEdit, setPlaceToEdit] = useState(null);
   const [collectionModalOpen, setCollectionModalOpen] = useState(false);
@@ -439,6 +440,7 @@ export function AppProvider({ children }) {
     placeModalOpen, placeToEdit, openPlaceModal, closePlaceModal,
     collectionModalOpen, openCollectionModal, closeCollectionModal,
     aiModalOpen, openAIModal, closeAIModal,
+    isSidebarCollapsed, setIsSidebarCollapsed,
     ctxMenu, ctxLatLng, showCtxMenu, hideCtxMenu,
     mapStyle, changeMapStyle, satOn, toggleSatellite,
     onboardVisible, setOnboardVisible,

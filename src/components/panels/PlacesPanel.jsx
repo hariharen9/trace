@@ -188,8 +188,8 @@ export default function PlacesPanel() {
   return (
     <div className="flex flex-col h-full overflow-visible">
       {/* Top Controls */}
-      <div className="sticky top-0 bg-[#0d0d18] z-10 pb-4 mb-2 border-b border-b1">
-        <div className="relative mb-3 mt-1">
+      <div className="sticky -top-5 -mx-5 px-5 pt-5 bg-base z-10 pb-4 mb-2 border-b border-b1">
+        <div className="relative mb-3">
           <Filter size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-t3" />
           <input 
             type="text" 
@@ -269,9 +269,9 @@ export default function PlacesPanel() {
               </p>
               <button 
                 onClick={openCollectionModal}
-                className="text-[10px] font-semibold text-primary hover:text-ta transition-colors flex items-center gap-1"
+                className="text-[10px] font-bold text-[#10b981] bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.2)] hover:bg-[rgba(16,185,129,0.2)] hover:text-[#34d399] hover:border-[rgba(16,185,129,0.3)] transition-all px-2 py-1.5 rounded-md flex items-center gap-1"
               >
-                <Plus size={10} /> NEW
+                <Plus size={10} strokeWidth={2.5} /> NEW
               </button>
             </div>
             

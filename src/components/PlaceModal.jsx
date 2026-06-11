@@ -206,7 +206,7 @@ export default function PlaceModal() {
               Cancel
             </button>
             <button onClick={handleSave}
-              className="py-2.5 px-5 rounded-lg font-body text-sm font-medium cursor-pointer transition-all duration-150 border border-transparent bg-primary text-white hover:bg-[#5a52dd] hover:-translate-y-px">
+              className="py-2.5 px-5 rounded-lg font-body text-sm font-bold cursor-pointer transition-all duration-150 border border-transparent bg-white text-black hover:bg-gray-200 hover:-translate-y-px shadow-[0_2px_10px_rgba(255,255,255,0.1)]">
               {placeToEdit ? 'Update place' : 'Save place'}
             </button>
           </div>

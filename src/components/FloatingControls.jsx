@@ -30,7 +30,7 @@ function TopBar() {
       </button>
       <button
         onClick={openSearchModal}
-        className="flex items-center gap-1.5 rounded-full py-2 px-3.5 text-xs font-medium cursor-pointer transition-all duration-200 border border-transparent text-white whitespace-nowrap bg-primary hover:bg-[#5a52dd]">
+        className="flex items-center gap-1.5 rounded-full py-2 px-3.5 text-xs font-bold cursor-pointer transition-all duration-200 border border-transparent text-black whitespace-nowrap bg-white hover:bg-gray-200 shadow-[0_2px_10px_rgba(255,255,255,0.1)]">
         <Search size={13} />
         ⌘K  Global Search
       </button>
@@ -40,11 +40,11 @@ function TopBar() {
 
 /* ── Bottom Bar ── */
 function BottomBar() {
-  const { mapStyle, changeMapStyle } = useApp();
+  const { mapStyle, changeMapStyle, isSidebarCollapsed } = useApp();
   const styles = ['dark', 'topo', 'streets', 'satellite'];
 
   return (
-    <div className="bottom-bar-float fixed bottom-5 left-1/2 -translate-x-1/2 z-[800] flex gap-1.5 rounded-full p-1.5 border border-b2"
+    <div className={`bottom-bar-float fixed bottom-5 -translate-x-1/2 z-[800] flex gap-1.5 rounded-full p-1.5 border border-b2 transition-all duration-300 ${isSidebarCollapsed ? 'left-1/2' : 'left-[calc(50vw+170px)]'}`}
       style={{ background: 'var(--color-glass)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
       {styles.map(s => (
         <button key={s}
