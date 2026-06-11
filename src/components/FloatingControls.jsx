@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Globe, Plus, Minus, Crosshair, Compass, Search } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -99,6 +100,16 @@ function GeoButton() {
 /* ── Onboard Chip ── */
 function OnboardChip() {
   const { onboardVisible, setOnboardVisible } = useApp();
+
+  useEffect(() => {
+    if (onboardVisible) {
+      const timer = setTimeout(() => {
+        setOnboardVisible(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [onboardVisible, setOnboardVisible]);
+
   if (!onboardVisible) return null;
   return (
     <div className="onboard-float onboard-enter fixed top-[68px] right-4 border border-ba rounded-lg p-3 px-[15px] z-[800] max-w-[230px]"

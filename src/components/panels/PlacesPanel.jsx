@@ -131,7 +131,7 @@ function EmptyState({ openPlaceModal }) {
       </p>
       <button
         onClick={() => openPlaceModal()}
-        className="py-2 px-5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-150 border border-ba bg-pglow text-ta hover:bg-primary hover:text-white hover:border-primary">
+        className="py-2 px-5 rounded-lg text-xs font-medium cursor-pointer transition-all duration-150 border border-ba bg-pglow text-ta hover:bg-primary hover:text-black hover:border-primary">
         + Add a place
       </button>
     </div>

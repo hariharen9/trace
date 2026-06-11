@@ -22,21 +22,21 @@ export default function SearchModal() {
 
     // Fallback to Nominatim Search for places
     const fallbackQuery = parsed.query || searchQuery;
-    
+
     setLoading(true);
     try {
       let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallbackQuery)}&limit=10`;
-      
+
       const map = mapRef.current;
       if (map) {
         const bounds = map.getBounds();
         const viewbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
         url += `&viewbox=${viewbox}&bounded=0`;
       }
-      
+
       const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
       const data = await res.json();
-      
+
       return data.map(d => {
         const parts = d.display_name.split(', ');
         return {
@@ -64,7 +64,7 @@ export default function SearchModal() {
       setResolvingUrl(false);
       return;
     }
-    
+
     if (isGoogleMapsLink(query)) {
       setResolvingUrl(true);
     }
@@ -83,7 +83,7 @@ export default function SearchModal() {
       }
       setFocusIdx(0);
     }, delay);
-    
+
     return () => clearTimeout(timeoutId);
   }, [query, mapRef]);
 
@@ -155,7 +155,7 @@ export default function SearchModal() {
               Searching global map data...
             </div>
           ) : query.trim() && results.length === 0 ? (
-             <div className="text-center py-8 text-t3 text-sm">No places found for "{query}"</div>
+            <div className="text-center py-8 text-t3 text-sm">No places found for "{query}". <br /> Try searching with full name of the place. <br /> or past URL/Link from Google Maps</div>
           ) : !query.trim() ? (
             <div className="text-center py-8 text-t3 text-sm flex flex-col items-center gap-4">
               <div className="flex gap-4 opacity-40">
@@ -163,7 +163,7 @@ export default function SearchModal() {
                 <LinkIcon size={24} />
               </div>
               <div>
-                Type to search the world...<br/>
+                Type to search the world...<br />
                 <span className="text-xs opacity-60">You can also paste coordinates or Google Maps links</span>
               </div>
             </div>
