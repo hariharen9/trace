@@ -77,7 +77,7 @@ export const STATS = {
     { label: '🌆 Most explored area', value: 'Indiranagar' },
   ],
   shortcuts: [
-    { action: 'AI Search', key: '⌘K' },
+    { action: 'Global Search', key: '⌘K' },
     { action: 'New place', key: 'N' },
     { action: 'Context menu', key: 'Right-click map' },
     { action: 'Close / dismiss', key: 'Esc' },
@@ -85,26 +85,7 @@ export const STATS = {
   sparkData: [8, 12, 6, 15, 11, 18, 14, 22, 17, 25, 20, 29],
 };
 
-export const AI_RESULTS = [
-  { emoji: '☕', title: 'Third Wave Coffee, Indiranagar', desc: 'Quiet · outdoor seating · solid wifi · well-reviewed', dist: '1.2 km' },
-  { emoji: '🌿', title: 'Dyu Art Café', desc: 'Bohemian · books · great filter coffee · usually quiet', dist: '2.4 km' },
-  { emoji: '📚', title: 'Atta Galatta Bookstore Café', desc: 'Bookstore + café · very quiet · no music on weekdays', dist: '3.1 km' },
-  { emoji: '🎵', title: 'Matteo Coffea', desc: 'Church Street · specialty coffee · calm evenings', dist: '2.9 km' },
-];
 
-export const INLINE_SUGGESTIONS = [
-  { emoji: '☕', name: 'Matteo Coffea', sub: 'Church Street · quiet · specialty', dist: '2.9 km' },
-  { emoji: '🌿', name: 'Dyu Art Café', sub: 'Bohemian · books · great wifi', dist: '2.4 km' },
-  { emoji: '📚', name: 'Atta Galatta', sub: 'Bookstore café · very quiet', dist: '3.1 km' },
-  { emoji: '☁️', name: 'Kapi Kottai', sub: 'Filter coffee · very Bangalore', dist: '1.8 km' },
-];
-
-export const QUICK_PROMPTS = [
-  { emoji: '🍛', label: 'Best biryani nearby', query: 'Best biryani within 5km' },
-  { emoji: '💻', label: 'Late-night work café', query: 'Quiet work café open after 9pm' },
-  { emoji: '🌇', label: 'Date spot ideas', query: 'Romantic rooftop date spot Bangalore' },
-  { emoji: '💎', label: 'Hidden gems', query: 'Hidden gems Bengaluru' },
-];
 
 export const EMOJI_OPTIONS = [
   { group: 'Food & Drink', emojis: ['☕', '🍛', '🍺', '🍷', '🍔', '🍕', '🍜', '🍦', '🥂', '🥐'] },

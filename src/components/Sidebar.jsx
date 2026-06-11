@@ -1,8 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Map, MapPin, Search, CalendarDays, BookOpen, BarChart3, Plus, Sparkles } from 'lucide-react';
+import { MapPin, Activity, Plane, BookOpen, BarChart3, Plus, LogOut, Globe } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { INLINE_SUGGESTIONS } from '../data';
 import PlacesPanel from './panels/PlacesPanel';
 import TimelinePanel from './panels/TimelinePanel';
 import TripsPanel from './panels/TripsPanel';
@@ -20,41 +19,8 @@ const TABS = [
 const PANELS = { places: PlacesPanel, timeline: TimelinePanel, trips: TripsPanel, journal: JournalPanel, stats: StatsPanel };
 
 export default function Sidebar() {
-  const { activeTab, switchTab, openPlaceModal, showToast, flyTo } = useApp();
+  const { activeTab, switchTab, openPlaceModal, openAIModal: openSearchModal, showToast, flyTo } = useApp();
   const { user, signOut } = useAuth();
-  const [searchValue, setSearchValue] = useState('');
-  const [showInline, setShowInline] = useState(false);
-  const [inlineResults, setInlineResults] = useState([]);
-  const [inlineLoading, setInlineLoading] = useState(false);
-  const searchTimer = useRef(null);
-
-  const handleFocus = () => {
-    setShowInline(true);
-    setInlineLoading(true);
-    setTimeout(() => setInlineLoading(false), 400);
-  };
-
-  const handleSearch = useCallback((val) => {
-    setSearchValue(val);
-    if (!val) { setInlineResults([]); setInlineLoading(false); return; }
-    setInlineLoading(true);
-    clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => {
-      setInlineResults(INLINE_SUGGESTIONS);
-      setInlineLoading(false);
-    }, 680);
-  }, []);
-
-  // Close inline when clicking outside
-  useEffect(() => {
-    if (!showInline) return;
-    const handler = (e) => {
-      if (!e.target.closest('.inline-search-area')) setShowInline(false);
-    };
-    setTimeout(() => document.addEventListener('click', handler), 10);
-    return () => document.removeEventListener('click', handler);
-  }, [showInline]);
-
   const ActivePanel = PANELS[activeTab];
 
   return (
@@ -97,47 +63,19 @@ export default function Sidebar() {
       )}
 
       {/* ── Command input ── */}
-      <div className="inline-search-area px-6 pt-4 pb-4 relative group">
-        <Sparkles size={15} className="absolute left-9 top-1/2 -translate-y-1/2 text-ta transition-transform group-focus-within:scale-110" />
+      <div className="inline-search-area px-6 pt-4 pb-4 relative group cursor-pointer" onClick={openSearchModal}>
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl mx-6 mt-4 mb-4" style={{ top: '16px', bottom: '16px', left: '24px', right: '24px' }}></div>
+        <Globe size={15} className="absolute left-9 top-1/2 -translate-y-1/2 text-ta transition-transform group-focus-within:scale-110 pointer-events-none" />
         <input
-          className="w-full bg-elevated border border-b1 rounded-full py-2.5 pr-16 pl-10 text-t1 font-body text-sm outline-none transition-all duration-200 focus:border-ba focus:shadow-[0_0_0_3px_var(--color-pglow)] placeholder:text-t3"
-          placeholder="Ask AI or search mapz..."
+          className="w-full bg-elevated border border-b1 rounded-full py-2.5 pr-16 pl-10 text-t1 font-body text-sm outline-none transition-all duration-200 group-hover:border-ba group-hover:shadow-[0_0_0_3px_var(--color-pglow)] placeholder:text-t3 cursor-pointer pointer-events-none"
+          placeholder="Search the world... (⌘K)"
           autoComplete="off"
-          value={searchValue}
-          onFocus={handleFocus}
-          onChange={(e) => handleSearch(e.target.value)}
+          readOnly
         />
         <span className="absolute right-9 top-1/2 -translate-y-1/2 rounded-full py-0.5 px-2 text-[10px] font-semibold tracking-[0.05em] text-white pointer-events-none"
           style={{ background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-light))' }}>
           ⌘K
         </span>
-
-        {/* Inline AI results dropdown */}
-        {showInline && (
-          <div className="absolute top-16 left-4 right-4 bg-layer border border-ba rounded-xl p-2 z-[400]"
-            style={{ boxShadow: '0 16px 48px rgba(0,0,0,.55)' }}>
-            {inlineLoading || inlineResults.length === 0 ? (
-              <div className="flex items-center gap-2 px-3 py-2 text-xs text-t3">
-                <span className="flex gap-0.5">
-                  <span className="bounce-dot" /><span className="bounce-dot" /><span className="bounce-dot" />
-                </span>
-                {searchValue ? 'Searching…' : 'Thinking about your places…'}
-              </div>
-            ) : (
-              inlineResults.map((r, i) => (
-                <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors duration-150 hover:bg-elevated"
-                  onClick={() => { setShowInline(false); flyTo(12.9716, 77.6099); }}>
-                  <span className="text-lg">{r.emoji}</span>
-                  <div className="flex-1">
-                    <div className="text-sm text-t1 font-medium">{r.name}</div>
-                    <div className="text-xs text-t3 mt-0.5">{r.sub}</div>
-                  </div>
-                  <span className="font-mono text-[10px] text-teal">{r.dist}</span>
-                </div>
-              ))
-            )}
-          </div>
-        )}
       </div>
 
       {/* ── Nav tabs ── */}

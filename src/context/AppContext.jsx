@@ -16,10 +16,21 @@ function createMarkerElement(emoji, glow = false) {
   el.style.fontSize = '24px';
   el.style.cursor = 'pointer';
   el.style.filter = `drop-shadow(0 3px 9px rgba(0,0,0,.55))${glow ? ' drop-shadow(0 0 10px #6c63ff)' : ''}`;
-  el.style.transition = 'transform .15s';
-  el.innerHTML = emoji;
-  el.addEventListener('mouseover', () => el.style.transform = 'scale(1.2)');
-  el.addEventListener('mouseout', () => el.style.transform = '');
+  el.style.width = '32px';
+  el.style.height = '32px';
+  el.style.display = 'flex';
+  el.style.alignItems = 'center';
+  el.style.justifyContent = 'center';
+  
+  const inner = document.createElement('div');
+  inner.style.transition = 'transform .15s ease-out';
+  inner.style.display = 'inline-block';
+  inner.innerHTML = emoji;
+  
+  el.addEventListener('mouseover', () => inner.style.transform = 'scale(1.25)');
+  el.addEventListener('mouseout', () => inner.style.transform = '');
+  
+  el.appendChild(inner);
   return el;
 }
 
@@ -298,18 +309,25 @@ export function AppProvider({ children }) {
   }, [user, showToast]);
 
   // ── Map actions ──
-  const dropPin = useCallback((latlng) => {
+  const dropPin = useCallback((latlng, zoom = 15, emoji = '📍') => {
     const map = mapRef.current;
     if (!map || !latlng) return;
     if (tempPinRef.current) tempPinRef.current.remove();
     
-    tempPinRef.current = new maplibregl.Marker({ element: createMarkerElement('📍') })
+    const el = createMarkerElement(emoji);
+    el.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showCtxMenu(e.clientX, e.clientY, latlng);
+    });
+    
+    tempPinRef.current = new maplibregl.Marker({ element: el })
       .setLngLat([latlng.lng, latlng.lat])
       .addTo(map);
       
-    map.flyTo({ center: [latlng.lng, latlng.lat], zoom: 15, speed: 1.2 });
-    showToast('📍 Pin dropped');
-  }, [showToast]);
+    map.flyTo({ center: [latlng.lng, latlng.lat], zoom, speed: 1.2 });
+    showToast(`${emoji} Pin dropped`);
+  }, [showToast, showCtxMenu]);
 
   const navigateTo = useCallback((lat, lng) => {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');

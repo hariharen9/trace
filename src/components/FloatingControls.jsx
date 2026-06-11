@@ -1,4 +1,4 @@
-import { Globe, Sparkles, Plus, Minus, Crosshair, Compass } from 'lucide-react';
+import { Globe, Plus, Minus, Crosshair, Compass, Search } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { LEGEND_ITEMS } from '../data';
 
@@ -17,7 +17,7 @@ export default function FloatingControls() {
 
 /* ── Top Bar ── */
 function TopBar() {
-  const { satOn, toggleSatellite, openAIModal } = useApp();
+  const { satOn, toggleSatellite, openAIModal: openSearchModal } = useApp();
 
   return (
     <div className="top-bar-float fixed top-4 right-4 flex gap-2 z-[800]">
@@ -31,10 +31,10 @@ function TopBar() {
         {satOn ? '🗺️ Streets' : <><Globe size={13} /> Satellite</>}
       </button>
       <button
-        onClick={openAIModal}
+        onClick={openSearchModal}
         className="flex items-center gap-1.5 rounded-full py-2 px-3.5 text-xs font-medium cursor-pointer transition-all duration-200 border border-transparent text-white whitespace-nowrap bg-primary hover:bg-[#5a52dd]">
-        <Sparkles size={13} />
-        ⌘K  AI Search
+        <Search size={13} />
+        ⌘K  Global Search
       </button>
     </div>
   );
