@@ -3,11 +3,11 @@ import { TIMELINE } from '../../data';
 export default function TimelinePanel() {
   return (
     <div className="pt-2">
-      {TIMELINE.reduce((acc, item, i) => {
+      {TIMELINE.map((item, i) => {
         const prevItem = TIMELINE[i - 1];
         const showMonth = item.month && item.month !== (prevItem?.month);
 
-        acc.push(
+        return (
           <div key={item.id}>
             {showMonth && (
               <p className="font-mono text-[10px] font-medium tracking-[0.12em] text-t3 uppercase mt-5 mb-3 mx-1 first:mt-2">
@@ -39,8 +39,7 @@ export default function TimelinePanel() {
             </div>
           </div>
         );
-        return acc;
-      }, [])}
+      })}
     </div>
   );
 }
