@@ -188,7 +188,7 @@ export default function PlacesPanel() {
   return (
     <div className="flex flex-col h-full overflow-visible">
       {/* Top Controls */}
-      <div className="sticky -top-5 -mx-5 px-5 pt-5 bg-base z-10 pb-4 mb-2 border-b border-b1">
+      <div className="sticky -top-5 -mt-5 -mx-5 px-5 pt-5 bg-base z-10 pb-4 mb-2 border-b border-b1">
         <div className="relative mb-3">
           <Filter size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-t3" />
           <input 

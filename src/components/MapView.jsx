@@ -36,18 +36,25 @@ export default function MapView() {
 
     // ── Context menu (right-click release without drag) ──
     map.on('contextmenu', (e) => {
-      showCtxMenu(e.point.x, e.point.y, { lat: e.lngLat.lat, lng: e.lngLat.lng });
+      const orig = e.originalEvent;
+      if (orig) {
+        showCtxMenu(orig.clientX, orig.clientY, { lat: e.lngLat.lat, lng: e.lngLat.lng });
+      }
     });
 
     // ── Long press (mobile) ──
     let longPressTimer;
-    let startPos = null;
 
     map.on('touchstart', (e) => {
-      startPos = e.point;
-      longPressTimer = setTimeout(() => {
-        showCtxMenu(startPos.x, startPos.y, { lat: e.lngLat.lat, lng: e.lngLat.lng });
-      }, 600);
+      const orig = e.originalEvent;
+      const touch = orig?.touches?.[0] || orig?.changedTouches?.[0] || orig;
+      if (touch) {
+        const clientX = touch.clientX;
+        const clientY = touch.clientY;
+        longPressTimer = setTimeout(() => {
+          showCtxMenu(clientX, clientY, { lat: e.lngLat.lat, lng: e.lngLat.lng });
+        }, 600);
+      }
     });
 
     map.on('touchmove', () => clearTimeout(longPressTimer));
