@@ -8,17 +8,19 @@ export const DEMO_PLACES = [
   { id: 3, lat: 12.9698, lng: 77.7500, emoji: '🎮', name: 'Play Zone', addr: 'Whitefield, Bengaluru', note: '', category: 'Memory', pinned: false, visitedAgo: 'yesterday', tags: ['gaming', 'friends'] },
   { id: 4, lat: 12.9279, lng: 77.6271, emoji: '🍛', name: 'Meghana Foods', addr: 'Koramangala, Bengaluru', note: 'Best biryani in Bangalore. Period.', category: 'Food', pinned: false, visitedAgo: '3 days ago', tags: ['biryani'] },
   { id: 5, lat: 12.9716, lng: 77.6099, emoji: '💍', name: 'Matteo Coffea', addr: 'Church Street', note: 'First date. Filter coffee.', category: 'Memory', pinned: false },
-  { id: 6, lat: 12.9783, lng: 77.6408, emoji: '🍺', name: 'Toit Brewpub', addr: 'Indiranagar', note: "Arjun's birthday rooftop", category: 'Food', pinned: false },
+  { id: 6, lat: 12.9783, lng: 77.6408, emoji: '🍺', name: 'Toit Brewpub', addr: 'Indiranagar', note: "Hari's birthday rooftop", category: 'Food', pinned: false },
 ];
 
 export const COLLECTIONS = [
-  { id: 1, emoji: '☕', name: 'Best Cafés', count: '12 places · Bengaluru', color: 'rgba(245,158,11,0.12)' },
-  { id: 2, emoji: '🌇', name: 'Date Spots', count: '7 places · Bengaluru', color: 'rgba(244,63,94,0.12)' },
-  { id: 3, emoji: '🍜', name: 'Biryani Trail', count: '9 places · BLR + Hyd', color: 'rgba(16,185,129,0.12)' },
+  { id: 1, emoji: '☕', name: 'Best Cafés', color: 'rgba(245,158,11,0.12)' },
+  { id: 2, emoji: '🌇', name: 'Date Spots', color: 'rgba(244,63,94,0.12)' },
+  { id: 3, emoji: '🍽️', name: 'Good Food', color: 'rgba(16,185,129,0.12)' },
+  { id: 4, emoji: '📌', name: 'Places to Visit', color: 'rgba(59,130,246,0.12)' },
+  { id: 5, emoji: '📸', name: 'Memorable Places', color: 'rgba(108,99,255,0.12)' },
 ];
 
 export const TIMELINE = [
-  { id: 1, emoji: '🎂', title: "Arjun's Birthday Dinner", sub: 'Toit Brewpub · Jun 28 · 8pm', mood: '😄 Epic night', highlighted: true, month: 'June 2025' },
+  { id: 1, emoji: '🎂', title: "Hari's Birthday Dinner", sub: 'Toit Brewpub · Jun 28 · 8pm', mood: '😄 Epic night', highlighted: true, month: 'June 2025' },
   { id: 2, emoji: '🌅', title: 'Lalbagh Sunrise Walk', sub: 'Lalbagh Garden · Jun 22 · 6am', mood: '🧘 Peaceful', highlighted: false },
   { id: 3, emoji: '☕', title: 'Deep work session', sub: 'Third Wave · Jun 20 · 9:30am', mood: '💻 Productive', highlighted: false },
   { id: 4, emoji: '🏖️', title: 'Goa Trip — Day 1', sub: 'Palolem Beach · May 18–22', mood: '🌊 Adventure', highlighted: true, month: 'May 2025' },
@@ -53,7 +55,7 @@ export const TRIPS = [
 ];
 
 export const JOURNAL_ENTRIES = [
-  { id: 1, day: '28', month: 'Jun', title: "Arjun's birthday — Toit nights", loc: '📍 Toit Brewpub, Indiranagar', body: 'Ten of us crammed into the rooftop corner. The mango wheat beer was cold, the laughter was loud, and somewhere between the nachos and midnight, I remembered why this city feels like home.' },
+  { id: 1, day: '28', month: 'Jun', title: "Hari's birthday — Toit nights", loc: '📍 Toit Brewpub, Indiranagar', body: 'Ten of us crammed into the rooftop corner. The mango wheat beer was cold, the laughter was loud, and somewhere between the nachos and midnight, I remembered why this city feels like home.' },
   { id: 2, day: '22', month: 'Jun', title: '6am walk at Lalbagh', loc: '📍 Lalbagh Botanical Garden', body: 'The giant rock at sunrise. Nobody around, just pigeons and morning light cutting through the jacaranda trees. Brought my AirPods and a coffee. Need to do this every week.' },
   { id: 3, day: '04', month: 'May', title: 'First date. Matteo Coffea.', loc: '📍 Matteo Coffea, Church Street', body: 'The filter coffee was excellent. The conversation was better. I keep coming back to this place now — it has an energy I can\'t quite explain.' },
 ];
@@ -93,7 +95,7 @@ export const EMOJI_OPTIONS = [
   { group: 'Activities', emojis: ['🎮', '🎵', '📚', '🎬', '🎟️', '🚲', '⚽', '🎸'] },
   { group: 'Life & Work', emojis: ['💼', '💻', '🎓', '💍', '❤️', '🎉', '💡', '🏡', '🏠', '📍', '✈️', '📁'] }
 ];
-export const CATEGORY_OPTIONS = ['Café', 'Food', 'Memory', 'Work', 'Photo spot', 'Hidden gem', 'Date spot'];
+export const CATEGORY_OPTIONS = ['Café', 'Food', 'Memory', 'Work', 'Photo spot', 'Hidden gem', 'Date spot', 'Home'];
 export const VIBE_OPTIONS = ['😄 Joyful', '🧘 Peaceful', '💻 Productive', '🌊 Adventure', '🫀 Emotional', '🚀 Energized'];
 
 export const TRIP_STATUS_OPTIONS = ['planning', 'active', 'completed'];
@@ -125,4 +127,5 @@ export const BADGE_STYLES = {
   'Photo spot': { bg: 'rgba(244,63,94,0.14)', color: '#f43f5e' },
   'Hidden gem': { bg: 'rgba(108,99,255,0.14)', color: '#a78bfa' },
   'Date spot': { bg: 'rgba(244,63,94,0.14)', color: '#f43f5e' },
+  'Home': { bg: 'rgba(59,130,246,0.14)', color: '#3b82f6' },
 };

@@ -5,9 +5,12 @@ import { useApp } from '../context/AppContext';
 const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_KEY;
 
 export const MAP_STYLES = {
-  streets: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`,
+  streets: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
   dark: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`,
   topo: `https://api.maptiler.com/maps/topo-v2/style.json?key=${MAPTILER_KEY}`,
+  outdoor: `https://api.maptiler.com/maps/outdoor-v2/style.json?key=${MAPTILER_KEY}`,
+  ocean: `https://api.maptiler.com/maps/ocean/style.json?key=${MAPTILER_KEY}`,
+  pastel: `https://api.maptiler.com/maps/pastel/style.json?key=${MAPTILER_KEY}`,
   satellite: `https://api.maptiler.com/maps/hybrid/style.json?key=${MAPTILER_KEY}`,
 };
 

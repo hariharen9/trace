@@ -66,38 +66,42 @@ function PlaceCard({ place, index }) {
         </div>
       )}
 
-      {/* Actions — visible on hover */}
-      <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-b1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-        <button
-          onClick={handlePin}
-          className={`flex items-center gap-1 py-1.5 px-2.5 rounded-lg text-[10px] font-medium cursor-pointer transition-all duration-150 border
-            ${place.pinned
-              ? 'bg-pglow border-ba text-ta'
-              : 'bg-transparent border-b1 text-t3 hover:border-b2 hover:text-t2'
-            }`}
-          title={place.pinned ? 'Unpin' : 'Pin'}>
-          <Pin size={11} />
-          {place.pinned ? 'Pinned' : 'Pin'}
-        </button>
-        <button
-          onClick={handleEdit}
-          className="flex items-center gap-1 py-1.5 px-2.5 rounded-lg text-[10px] font-medium cursor-pointer transition-all duration-150 border bg-transparent border-b1 text-t3 hover:border-b2 hover:text-t2"
-          title="Edit">
-          <Edit2 size={11} />
-          Edit
-        </button>
-        <div className="flex-1" />
-        <button
-          onClick={handleDelete}
-          className={`flex items-center gap-1 py-1.5 px-2.5 rounded-lg text-[10px] font-medium cursor-pointer transition-all duration-150 border
-            ${confirmDelete
-              ? 'bg-[rgba(244,63,94,0.14)] border-[rgba(244,63,94,0.3)] text-rose'
-              : 'bg-transparent border-b1 text-t3 hover:border-[rgba(244,63,94,0.3)] hover:text-rose'
-            }`}
-          title="Delete">
-          <Trash2 size={11} />
-          {confirmDelete ? 'Confirm?' : 'Delete'}
-        </button>
+      {/* Actions */}
+      <div className="grid grid-rows-[0fr] opacity-0 group-hover:grid-rows-[1fr] group-hover:opacity-100 transition-all duration-300">
+        <div className="overflow-hidden">
+          <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-b1">
+            <button
+              onClick={handlePin}
+              className={`flex items-center gap-1 py-1.5 px-2.5 rounded-lg text-[10px] font-medium cursor-pointer transition-all duration-150 border
+                ${place.pinned
+                  ? 'bg-pglow border-ba text-ta'
+                  : 'bg-transparent border-b1 text-t3 hover:border-b2 hover:text-t2 hover:bg-layer'
+                }`}
+              title={place.pinned ? 'Unpin' : 'Pin'}>
+              <Pin size={11} />
+              {place.pinned ? 'Pinned' : 'Pin'}
+            </button>
+            <button
+              onClick={handleEdit}
+              className="flex items-center gap-1 py-1.5 px-2.5 rounded-lg text-[10px] font-medium cursor-pointer transition-all duration-150 border bg-transparent border-b1 text-t3 hover:border-b2 hover:text-t2 hover:bg-layer"
+              title="Edit">
+              <Edit2 size={11} />
+              Edit
+            </button>
+            <div className="flex-1" />
+            <button
+              onClick={handleDelete}
+              className={`flex items-center gap-1 py-1.5 px-2.5 rounded-lg text-[10px] font-medium cursor-pointer transition-all duration-150 border
+                ${confirmDelete
+                  ? 'bg-[rgba(244,63,94,0.14)] border-[rgba(244,63,94,0.3)] text-rose'
+                  : 'bg-transparent border-b1 text-t3 hover:border-[rgba(244,63,94,0.3)] hover:text-rose hover:bg-[rgba(244,63,94,0.05)]'
+                }`}
+              title="Delete">
+              <Trash2 size={11} />
+              {confirmDelete ? 'Confirm?' : 'Delete'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

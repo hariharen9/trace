@@ -1,6 +1,6 @@
 import { doc, getDoc, setDoc, collection, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
-import { DEMO_PLACES, JOURNAL_ENTRIES } from '../data';
+import { DEMO_PLACES, JOURNAL_ENTRIES, COLLECTIONS as DEMO_COLLECTIONS } from '../data';
 
 // Session-level seeding lock to prevent React strict double-mount seeding race conditions
 const activeSeeds = new Set();
@@ -89,8 +89,9 @@ export async function seedDemoData(uid) {
     const needsPlaces = !data.seeded;
     const needsJournals = !data.seededJournals;
     const needsTrips = !data.seededTrips;
+    const needsCollections = !data.seededCollections;
 
-    if (!needsPlaces && !needsJournals && !needsTrips) {
+    if (!needsPlaces && !needsJournals && !needsTrips && !needsCollections) {
       return; // Already seeded everything
     }
 
@@ -159,6 +160,20 @@ export async function seedDemoData(uid) {
         });
       });
       batch.set(profileRef, { seededTrips: true, seededTripsAt: serverTimestamp() }, { merge: true });
+    }
+
+    if (needsCollections) {
+      // Seed demo collections
+      DEMO_COLLECTIONS.forEach((col) => {
+        const colRef = doc(collection(db, 'users', uid, 'collections'));
+        batch.set(colRef, {
+          emoji: col.emoji,
+          name: col.name,
+          color: col.color,
+          createdAt: serverTimestamp(),
+        });
+      });
+      batch.set(profileRef, { seededCollections: true, seededCollectionsAt: serverTimestamp() }, { merge: true });
     }
 
     await batch.commit();
