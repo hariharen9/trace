@@ -94,6 +94,10 @@ export function AppProvider({ children }) {
   const [collectionsLoading, setCollectionsLoading] = useState(true);
   const [journals, setJournals] = useState([]);
   const [journalsLoading, setJournalsLoading] = useState(true);
+  const [trips, setTrips] = useState([]);
+  const [tripsLoading, setTripsLoading] = useState(true);
+  const [tripModalOpen, setTripModalOpen] = useState(false);
+  const [tripToEdit, setTripToEdit] = useState(null);
 
   // ── Seed demo data on first login, then subscribe to Firestore ──
   useEffect(() => {
@@ -104,12 +108,15 @@ export function AppProvider({ children }) {
       setCollectionsLoading(false);
       setJournals([]);
       setJournalsLoading(false);
+      setTrips([]);
+      setTripsLoading(false);
       return;
     }
 
     let unsubscribePlaces = () => {};
     let unsubscribeCols = () => {};
     let unsubscribeJournals = () => {};
+    let unsubscribeTrips = () => {};
 
     const init = async () => {
       // Seed once per session
@@ -173,6 +180,20 @@ export function AppProvider({ children }) {
         console.error('Firestore sync error (journals):', err);
         setJournalsLoading(false);
       });
+      // Subscribe to trips
+      const tripsRef = query(
+        collection(db, 'users', user.uid, 'trips'),
+        orderBy('createdAt', 'desc')
+      );
+
+      unsubscribeTrips = onSnapshot(tripsRef, (snapshot) => {
+        const tripList = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setTrips(tripList);
+        setTripsLoading(false);
+      }, (err) => {
+        console.error('Firestore sync error (trips):', err);
+        setTripsLoading(false);
+      });
     };
 
     init();
@@ -180,6 +201,7 @@ export function AppProvider({ children }) {
       unsubscribePlaces();
       unsubscribeCols();
       unsubscribeJournals();
+      unsubscribeTrips();
     };
   }, [user]);
 
@@ -223,6 +245,15 @@ export function AppProvider({ children }) {
 
   const openAIModal = useCallback(() => setAiModalOpen(true), []);
   const closeAIModal = useCallback(() => setAiModalOpen(false), []);
+
+  const openTripModal = useCallback((trip = null) => {
+    setTripToEdit(trip);
+    setTripModalOpen(true);
+  }, []);
+  const closeTripModal = useCallback(() => {
+    setTripModalOpen(false);
+    setTripToEdit(null);
+  }, []);
 
   // ── Context menu ──
   const showCtxMenu = useCallback((x, y, latlng) => {
@@ -382,6 +413,50 @@ export function AppProvider({ children }) {
     }
   }, [user, closeJournalModal, showToast]);
 
+  // ── Trip actions ──
+  const addTrip = useCallback(async (trip) => {
+    if (!user) return;
+    try {
+      const tripsRef = collection(db, 'users', user.uid, 'trips');
+      await addDoc(tripsRef, {
+        ...trip,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      closeTripModal();
+      showToast(`✈️ "${trip.name}" trip created`, 'ok');
+    } catch (err) {
+      console.error('Error saving trip:', err);
+      showToast('❌ Failed to save trip');
+    }
+  }, [user, closeTripModal, showToast]);
+
+  const updateTrip = useCallback(async (tripId, updates) => {
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', user.uid, 'trips', tripId), {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      });
+      closeTripModal();
+      showToast('✏️ Trip updated', 'ok');
+    } catch (err) {
+      console.error('Error updating trip:', err);
+      showToast('❌ Failed to update trip');
+    }
+  }, [user, closeTripModal, showToast]);
+
+  const deleteTrip = useCallback(async (tripId) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, 'users', user.uid, 'trips', tripId));
+      showToast('🗑️ Trip removed', 'ok');
+    } catch (err) {
+      console.error('Error deleting trip:', err);
+      showToast('❌ Failed to delete trip');
+    }
+  }, [user, showToast]);
+
   // ── Map actions ──
   const dropPin = useCallback((latlng, zoom = 15, emoji = '📍') => {
     const map = mapRef.current;
@@ -482,6 +557,7 @@ export function AppProvider({ children }) {
         closeCollectionModal();
         closeAIModal();
         closeJournalModal();
+        closeTripModal();
         hideCtxMenu();
       } else if (e.key === 'n' && !e.target.matches('input, textarea')) {
         openPlaceModal();
@@ -489,7 +565,7 @@ export function AppProvider({ children }) {
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [openAIModal, closePlaceModal, closeCollectionModal, closeAIModal, closeJournalModal, hideCtxMenu, openPlaceModal]);
+  }, [openAIModal, closePlaceModal, closeCollectionModal, closeAIModal, closeJournalModal, closeTripModal, hideCtxMenu, openPlaceModal]);
 
   // ── URL params on mount ──
   useEffect(() => {
@@ -514,6 +590,7 @@ export function AppProvider({ children }) {
     placeModalOpen, placeToEdit, openPlaceModal, closePlaceModal,
     collectionModalOpen, openCollectionModal, closeCollectionModal,
     journalModalOpen, journalToEdit, openJournalModal, closeJournalModal,
+    tripModalOpen, tripToEdit, openTripModal, closeTripModal,
     aiModalOpen, openAIModal, closeAIModal,
     isSidebarCollapsed, setIsSidebarCollapsed,
     ctxMenu, ctxLatLng, showCtxMenu, hideCtxMenu,
@@ -523,6 +600,7 @@ export function AppProvider({ children }) {
     savedPlaces, placesLoading, addPlace, deletePlace, togglePin, updatePlace,
     collections, collectionsLoading, addCollection, deleteCollection,
     journals, journalsLoading, addJournalEntry, deleteJournalEntry, updateJournalEntry,
+    trips, tripsLoading, addTrip, updateTrip, deleteTrip,
     flyTo, locateMe, dropPin, navigateTo, copyCoords,
     initMarkers,
   };

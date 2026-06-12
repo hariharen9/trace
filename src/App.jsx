@@ -7,6 +7,7 @@ import FloatingControls from './components/FloatingControls'
 import PlaceModal from './components/PlaceModal'
 import CollectionModal from './components/CollectionModal'
 import JournalModal from './components/JournalModal'
+import TripModal from './components/TripModal'
 import SearchModal from './components/SearchModal'
 import ContextMenu from './components/ContextMenu'
 import ToastContainer from './components/ToastContainer'
@@ -48,6 +49,7 @@ function AppContent() {
       <PlaceModal />
       <CollectionModal />
       <JournalModal />
+      <TripModal />
       <SearchModal />
       <ContextMenu />
       <ToastContainer />

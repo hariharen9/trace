@@ -24,9 +24,9 @@ export default function MapView() {
       container: containerRef.current,
       style: MAP_STYLES.streets,
       center: [77.5946, 12.9716],
-      zoom: 12,
-      pitch: 0,
-      bearing: 0,
+      zoom: 14.5,
+      pitch: 62,
+      bearing: -15,
       maxPitch: 72,
       dragRotate: true,
     });

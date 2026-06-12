@@ -96,6 +96,18 @@ export const EMOJI_OPTIONS = [
 export const CATEGORY_OPTIONS = ['Café', 'Food', 'Memory', 'Work', 'Photo spot', 'Hidden gem', 'Date spot'];
 export const VIBE_OPTIONS = ['😄 Joyful', '🧘 Peaceful', '💻 Productive', '🌊 Adventure', '🫀 Emotional', '🚀 Energized'];
 
+export const TRIP_STATUS_OPTIONS = ['planning', 'active', 'completed'];
+export const TRIP_COVER_COLORS = [
+  'rgba(108,99,255,0.14)',   // purple
+  'rgba(245,158,11,0.14)',   // amber
+  'rgba(244,63,94,0.14)',    // rose
+  'rgba(16,185,129,0.14)',   // emerald
+  'rgba(59,130,246,0.14)',   // blue
+  'rgba(168,85,247,0.14)',   // violet
+  'rgba(20,184,166,0.14)',   // teal
+  'rgba(249,115,22,0.14)',   // orange
+];
+
 
 export const MAP_FILTERS = {
   dark: 'invert(1) hue-rotate(180deg) brightness(0.68) saturate(0.52) contrast(1.15)',

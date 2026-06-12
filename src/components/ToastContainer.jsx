@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 
 export default function ToastContainer() {
-  const { toasts } = useApp();
+  const { toasts, isSidebarCollapsed } = useApp();
 
   return (
-    <div className="fixed bottom-[26px] left-1/2 -translate-x-1/2 z-[700] flex flex-col gap-[7px] items-center pointer-events-none">
+    <div className={`fixed bottom-[80px] -translate-x-1/2 z-[700] flex flex-col gap-[7px] items-center pointer-events-none transition-all duration-300 ${isSidebarCollapsed ? 'left-1/2' : 'left-[calc(50vw+170px)]'}`}>
       {toasts.map(toast => (
         <Toast key={toast.id} toast={toast} />
       ))}
