@@ -1,5 +1,5 @@
-// TRACE Service Worker — v1.0.0
-const CACHE_NAME = 'trace-v1';
+// TRACE Service Worker — v1.0.1
+const CACHE_NAME = 'trace-shell-v1';
 const TILE_CACHE = 'trace-tiles-v1';
 const DATA_CACHE = 'trace-data-v1';
 
@@ -7,14 +7,15 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  'https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=JetBrains+Mono:wght@400;500&display=swap',
+  '/favicon.svg',
+  'https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=JetBrains+Mono:wght@400;500&display=swap'
 ];
 
-// ── Install: pre-cache core shell ──
+// ── Install: pre-cache core assets ──
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[TRACE SW] Pre-caching app shell');
+      console.log('[TRACE SW] Pre-caching core shell');
       return cache.addAll(STATIC_ASSETS);
     }).then(() => self.skipWaiting())
   );
@@ -35,19 +36,38 @@ self.addEventListener('activate', (e) => {
 
 // ── Fetch strategy ──
 self.addEventListener('fetch', (e) => {
+  // Safeguard: Only handle HTTP/HTTPS protocols (ignores chrome-extension, etc.)
+  if (!e.request.url.startsWith('http')) {
+    return;
+  }
+
+  // CRITICAL: Only handle GET requests. Caching POST/PUT/DELETE throws errors.
+  if (e.request.method !== 'GET') {
+    return;
+  }
+
   const url = new URL(e.request.url);
 
+  // MapLibre / MapTiler vector tiles caching
   if (url.hostname.includes('maptiler') || url.pathname.includes('/tiles/')) {
     e.respondWith(tileStrategy(e.request));
     return;
   }
 
-  if (url.pathname.startsWith('/api/')) {
+  // Firebase auth calls or database API routes - network first
+  if (url.pathname.startsWith('/api/') || url.hostname.includes('googleapis.com') || url.hostname.includes('firebaseapp.com')) {
     e.respondWith(networkFirstStrategy(e.request, DATA_CACHE));
     return;
   }
 
-  e.respondWith(cacheFirstStrategy(e.request));
+  // index.html / main entrypoint - network first to ensure new asset hashes are loaded
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    e.respondWith(networkFirstStrategy(e.request, CACHE_NAME));
+    return;
+  }
+
+  // Static assets (Vite hashed bundles, images, icons, fonts) - stale while revalidate
+  e.respondWith(staleWhileRevalidateStrategy(e.request, CACHE_NAME));
 });
 
 async function tileStrategy(request) {
@@ -71,25 +91,22 @@ async function networkFirstStrategy(request, cacheName) {
     return response;
   } catch {
     const cached = await cache.match(request);
-    return cached || new Response(JSON.stringify({ error: 'Offline', offline: true }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return cached || new Response('Offline', { status: 503 });
   }
 }
 
-async function cacheFirstStrategy(request) {
-  const cache = await caches.open(CACHE_NAME);
+async function staleWhileRevalidateStrategy(request, cacheName) {
+  const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
-  if (cached) return cached;
-  try {
-    const response = await fetch(request);
-    if (response.ok) cache.put(request, response.clone());
+  
+  const networkFetch = fetch(request).then(async (response) => {
+    if (response.ok) {
+      await cache.put(request, response.clone());
+    }
     return response;
-  } catch {
-    const shell = await cache.match('/index.html');
-    return shell || new Response('Offline', { status: 503 });
-  }
+  }).catch(() => null);
+
+  return cached || networkFetch;
 }
 
 // ── Background sync ──
