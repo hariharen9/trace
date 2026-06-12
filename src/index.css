@@ -174,24 +174,7 @@
   /* ── ONBOARD CHIP ── */
   .onboard-enter { animation: fade-slide-in 0.5s 1.2s ease both; }
 
-  /* ── MOBILE ── */
-  @media (max-width: 680px) {
-    .app-layout { flex-direction: column !important; }
-    .app-sidebar {
-      position: static !important; height: 56% !important; width: 100% !important;
-      border-right: none !important;
-      border-top: 1px solid var(--color-b2) !important;
-      border-radius: 18px 18px 0 0 !important;
-    }
-    .app-map { height: 44% !important; flex: none !important; }
-    .drag-handle { display: block !important; }
-    .top-bar-float { top: 8px !important; right: 8px !important; }
-    .bottom-bar-float { display: none !important; }
-    .geo-float { bottom: 57% !important; right: 10px !important; }
-    .zoom-float { bottom: 57% !important; right: 56px !important; flex-direction: row !important; }
-    .legend-float { display: none !important; }
-    .onboard-float { display: none !important; }
-  }
+
 }
 
 /* ── Journal Markdown Formatting ── */

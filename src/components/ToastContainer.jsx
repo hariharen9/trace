@@ -5,7 +5,10 @@ export default function ToastContainer() {
   const { toasts, isSidebarCollapsed } = useApp();
 
   return (
-    <div className={`fixed bottom-[80px] -translate-x-1/2 z-[700] flex flex-col gap-[7px] items-center pointer-events-none transition-all duration-300 ${isSidebarCollapsed ? 'left-1/2' : 'left-[calc(50vw+170px)]'}`}>
+    <div className={`fixed z-[9999] flex flex-col gap-[7px] items-center pointer-events-none transition-all duration-300
+      max-md:top-20 max-md:bottom-auto max-md:left-1/2 max-md:-translate-x-1/2
+      md:bottom-[80px] md:-translate-x-1/2
+      ${isSidebarCollapsed ? 'md:left-1/2' : 'md:left-[calc(50vw+170px)]'}`}>
       {toasts.map(toast => (
         <Toast key={toast.id} toast={toast} />
       ))}

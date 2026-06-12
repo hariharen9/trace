@@ -67,7 +67,7 @@ function PlaceCard({ place, index }) {
       )}
 
       {/* Actions */}
-      <div className="grid grid-rows-[0fr] opacity-0 group-hover:grid-rows-[1fr] group-hover:opacity-100 transition-all duration-300">
+      <div className="grid grid-rows-[0fr] opacity-0 group-hover:grid-rows-[1fr] group-hover:opacity-100 max-md:grid-rows-[1fr] max-md:opacity-100 transition-all duration-300">
         <div className="overflow-hidden">
           <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-b1">
             <button
@@ -299,7 +299,7 @@ export default function PlacesPanel() {
                     </div>
                     <button 
                       onClick={(e) => { e.stopPropagation(); deleteCollection(c.id); }}
-                      className="p-1.5 text-t3 hover:text-rose opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1.5 text-t3 hover:text-rose opacity-0 group-hover:opacity-100 max-md:opacity-100 transition-opacity"
                       title="Delete Collection"
                     >
                       <Trash2 size={14} />

@@ -98,6 +98,7 @@ export function AppProvider({ children }) {
   const [tripsLoading, setTripsLoading] = useState(true);
   const [tripModalOpen, setTripModalOpen] = useState(false);
   const [tripToEdit, setTripToEdit] = useState(null);
+  const [isLocating, setIsLocating] = useState(false);
 
   // ── Seed demo data on first login, then subscribe to Firestore ──
   useEffect(() => {
@@ -493,8 +494,10 @@ export function AppProvider({ children }) {
   const locateMe = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
+    setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        setIsLocating(false);
         const { latitude: lat, longitude: lng } = pos.coords;
         if (userMarkerRef.current) userMarkerRef.current.remove();
         
@@ -514,6 +517,7 @@ export function AppProvider({ children }) {
         showToast('📍 You are here', 'ok');
       },
       () => {
+        setIsLocating(false);
         map.flyTo({ center: [77.5946, 12.9716], zoom: 14, speed: 1.2 });
         showToast('📍 Location demo: Bengaluru');
       },
@@ -601,7 +605,7 @@ export function AppProvider({ children }) {
     collections, collectionsLoading, addCollection, deleteCollection,
     journals, journalsLoading, addJournalEntry, deleteJournalEntry, updateJournalEntry,
     trips, tripsLoading, addTrip, updateTrip, deleteTrip,
-    flyTo, locateMe, dropPin, navigateTo, copyCoords,
+    flyTo, locateMe, isLocating, dropPin, navigateTo, copyCoords,
     initMarkers,
   };
 

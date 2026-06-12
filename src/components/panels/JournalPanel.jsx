@@ -138,7 +138,7 @@ export default function JournalPanel() {
                       <div className="flex items-center gap-1 shrink-0">
                         <button 
                           onClick={(e) => { e.stopPropagation(); openJournalModal(null, entry); }}
-                          className="p-1 text-[10px] text-t3 transition-all hover:text-t2 rounded opacity-0 group-hover:opacity-100 cursor-pointer"
+                          className="p-1 text-[10px] text-t3 transition-all hover:text-t2 rounded opacity-0 group-hover:opacity-100 max-md:opacity-100 cursor-pointer"
                           title="Edit journal entry"
                         >
                           <Edit2 size={11} />
@@ -146,7 +146,7 @@ export default function JournalPanel() {
                         <button 
                           onClick={(e) => handleDelete(entry.id, e)}
                           className={`p-1 text-[10px] text-t3 transition-all hover:text-rose rounded shrink-0 flex items-center gap-0.5 cursor-pointer
-                            ${confirmDeleteId === entry.id ? 'opacity-100 text-rose bg-rose/10 px-2' : 'opacity-0 group-hover:opacity-100'}`}
+                            ${confirmDeleteId === entry.id ? 'opacity-100 text-rose bg-rose/10 px-2' : 'opacity-0 group-hover:opacity-100 max-md:opacity-100'}`}
                           title="Delete journal entry"
                         >
                           <Trash2 size={11} />

@@ -39,9 +39,9 @@ function AppContent() {
   // ── Authenticated ──
   return (
     <AppProvider>
-      <div className="app-layout flex w-full h-full relative overflow-hidden">
+      <div className="app-layout flex flex-col md:flex-row w-full h-full relative overflow-hidden">
         <Sidebar />
-        <div className="app-map flex-1 h-full relative">
+        <div className="app-map max-md:absolute max-md:inset-0 max-md:z-0 md:flex-1 h-full relative">
           <MapView />
         </div>
       </div>
