@@ -72,7 +72,7 @@ export default function PlaceModal() {
       collectionId: collectionId || null,
     };
 
-    if (placeToEdit) {
+    if (placeToEdit && placeToEdit.id) {
       updatePlace(placeToEdit.id, payload);
     } else {
       addPlace(payload);

@@ -571,13 +571,72 @@ export function AppProvider({ children }) {
     return () => document.removeEventListener('keydown', handler);
   }, [openAIModal, closePlaceModal, closeCollectionModal, closeAIModal, closeJournalModal, closeTripModal, hideCtxMenu, openPlaceModal]);
 
-  // ── URL params on mount ──
+  // ── URL params & PWA Share Target on mount ──
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (p.get('action') === 'add') openPlaceModal();
-    if (p.get('action') === 'search') openAIModal();
-    if (p.get('tab')) setActiveTab(p.get('tab'));
+    
+    const title = p.get('title');
+    const text = p.get('text');
+    const url = p.get('url');
+
+    if (title || text || url) {
+      const sharedTitle = title || '';
+      const sharedText = text || '';
+      const sharedUrl = url || '';
+
+      // Extract URL from text (Google Maps shares text + link in the text param)
+      let extractedUrl = sharedUrl;
+      if (!extractedUrl) {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const match = sharedText.match(urlRegex);
+        if (match) {
+          extractedUrl = match[0];
+        }
+      }
+
+      // Try to parse coordinates from the URL (e.g. @lat,lng or place/lat,lng)
+      let lat = null;
+      let lng = null;
+      const searchTarget = extractedUrl || sharedText;
+
+      const geoRegex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const geoMatch = searchTarget.match(geoRegex);
+      if (geoMatch) {
+        lat = parseFloat(geoMatch[1]);
+        lng = parseFloat(geoMatch[2]);
+      } else {
+        const placeRegex = /place\/(-?\d+\.\d+),(-?\d+\.\d+)/;
+        const placeMatch = searchTarget.match(placeRegex);
+        if (placeMatch) {
+          lat = parseFloat(placeMatch[1]);
+          lng = parseFloat(placeMatch[2]);
+        }
+      }
+
+      // Clean notes content
+      let cleanNote = sharedText;
+      if (extractedUrl) {
+        cleanNote = cleanNote.replace(extractedUrl, '').trim();
+      }
+
+      // Open save modal with prefilled data
+      openPlaceModal(
+        lat && lng ? { lat, lng } : null,
+        {
+          name: sharedTitle || cleanNote.split(',')[0].slice(0, 32) || 'Shared Place',
+          addr: extractedUrl || cleanNote || 'Shared location',
+          note: cleanNote || '',
+          category: 'Location'
+        }
+      );
+
+      // Clean query string from browser URL so page reloads are clean
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+      if (p.get('action') === 'add') openPlaceModal();
+      if (p.get('action') === 'search') openAIModal();
+      if (p.get('tab')) setActiveTab(p.get('tab'));
+    }
   }, [openPlaceModal, openAIModal]);
 
   // ── Init map — no static markers, Firestore listener handles everything ──
