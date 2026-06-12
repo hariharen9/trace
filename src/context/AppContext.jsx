@@ -100,6 +100,16 @@ export function AppProvider({ children }) {
   const [tripToEdit, setTripToEdit] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
 
+  // Settings States
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [defaultZoom, setDefaultZoomState] = useState(() => {
+    const v = localStorage.getItem('trace_default_zoom');
+    return v ? Number(v) : 16;
+  });
+  const [defaultEmoji, setDefaultEmojiState] = useState(() => {
+    return localStorage.getItem('trace_default_emoji') || '📍';
+  });
+
   // ── Seed demo data on first login, then subscribe to Firestore ──
   useEffect(() => {
     if (!user) {
@@ -206,17 +216,197 @@ export function AppProvider({ children }) {
     };
   }, [user]);
 
-  // ── Core actions ──
-  const flyTo = useCallback((lat, lng, zoom = 16) => {
-    closeAllPopups();
-    mapRef.current?.flyTo({ center: [lng, lat], zoom, speed: 1.2 });
-  }, []);
-
   const showToast = useCallback((msg, type = '') => {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, msg, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
   }, []);
+
+  // ── Core actions ──
+  const flyTo = useCallback((lat, lng, zoom = null) => {
+    closeAllPopups();
+    const targetZoom = zoom !== null ? zoom : defaultZoom;
+    mapRef.current?.flyTo({ center: [lng, lat], zoom: targetZoom, speed: 1.2 });
+  }, [defaultZoom]);
+
+  const openSettingsModal = useCallback(() => setSettingsModalOpen(true), []);
+  const closeSettingsModal = useCallback(() => setSettingsModalOpen(false), []);
+
+  const setDefaultZoom = useCallback((zoom) => {
+    setDefaultZoomState(zoom);
+    localStorage.setItem('trace_default_zoom', zoom);
+  }, []);
+
+  const setDefaultEmoji = useCallback((emoji) => {
+    setDefaultEmojiState(emoji);
+    localStorage.setItem('trace_default_emoji', emoji);
+  }, []);
+
+  const exportUserData = useCallback(() => {
+    const data = {
+      version: '1.0.0',
+      exportedAt: new Date().toISOString(),
+      places: savedPlaces.map(({ createdAt, ...p }) => p),
+      collections: collections.map(({ createdAt, ...c }) => c),
+      journals: journals.map(({ createdAt, ...j }) => j),
+      trips: trips.map(({ createdAt, ...t }) => t)
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `trace_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('💾 Backup file downloaded', 'ok');
+  }, [savedPlaces, collections, journals, trips, showToast]);
+
+  const importUserData = useCallback(async (jsonData) => {
+    if (!user) return;
+    try {
+      const data = JSON.parse(jsonData);
+      if (!data.places || !Array.isArray(data.places)) {
+        throw new Error('Invalid backup format: places array missing');
+      }
+
+      showToast('⏳ Importing data...');
+      let placesCount = 0;
+      let collectionsCount = 0;
+      let journalsCount = 0;
+      let tripsCount = 0;
+
+      // 1. Import collections & keep track of ID mappings
+      const collectionIdMap = {};
+      if (data.collections && Array.isArray(data.collections)) {
+        for (const col of data.collections) {
+          const existing = collections.find(c => c.name === col.name);
+          if (existing) {
+            collectionIdMap[col.id] = existing.id;
+          } else {
+            const docRef = await addDoc(collection(db, 'users', user.uid, 'collections'), {
+              name: col.name,
+              emoji: col.emoji || '📁',
+              description: col.description || '',
+              createdAt: serverTimestamp()
+            });
+            collectionIdMap[col.id] = docRef.id;
+            collectionsCount++;
+          }
+        }
+      }
+
+      // 2. Import places & keep track of ID mappings
+      const placeIdMap = {};
+      if (data.places && Array.isArray(data.places)) {
+        for (const p of data.places) {
+          const existing = savedPlaces.find(sp => sp.name === p.name && Math.abs(sp.lat - p.lat) < 0.0001 && Math.abs(sp.lng - p.lng) < 0.0001);
+          if (existing) {
+            placeIdMap[p.id] = existing.id;
+          } else {
+            const mappedColId = p.collectionId ? (collectionIdMap[p.collectionId] || null) : null;
+            const docRef = await addDoc(collection(db, 'users', user.uid, 'places'), {
+              name: p.name,
+              emoji: p.emoji || '📍',
+              addr: p.addr || '',
+              note: p.note || '',
+              category: p.category || 'Café',
+              vibe: p.vibe || '',
+              lat: p.lat,
+              lng: p.lng,
+              pinned: p.pinned || false,
+              collectionId: mappedColId,
+              createdAt: serverTimestamp()
+            });
+            placeIdMap[p.id] = docRef.id;
+            placesCount++;
+          }
+        }
+      }
+
+      // 3. Import journals & map placeId references
+      if (data.journals && Array.isArray(data.journals)) {
+        for (const j of data.journals) {
+          const mappedPlaceId = j.placeId ? (placeIdMap[j.placeId] || null) : null;
+          const existing = journals.find(ej => ej.title === j.title && ej.date === j.date);
+          if (!existing) {
+            await addDoc(collection(db, 'users', user.uid, 'journals'), {
+              title: j.title,
+              date: j.date,
+              content: j.content || '',
+              placeId: mappedPlaceId,
+              createdAt: serverTimestamp()
+            });
+            journalsCount++;
+          }
+        }
+      }
+
+      // 4. Import trips & map stops to new placeId references
+      if (data.trips && Array.isArray(data.trips)) {
+        for (const t of data.trips) {
+          const existing = trips.find(et => et.name === t.name);
+          if (!existing) {
+            const mappedDays = t.days ? t.days.map(day => {
+              const mappedStops = day.stops ? day.stops.map(stop => {
+                if (stop.type === 'place' && stop.placeId) {
+                  return {
+                    ...stop,
+                    placeId: placeIdMap[stop.placeId] || stop.placeId
+                  };
+                }
+                return stop;
+              }) : [];
+              return {
+                ...day,
+                stops: mappedStops
+              };
+            }) : [];
+
+            await addDoc(collection(db, 'users', user.uid, 'trips'), {
+              name: t.name,
+              desc: t.desc || '',
+              startDate: t.startDate || '',
+              endDate: t.endDate || '',
+              color: t.color || '#6c63ff',
+              days: mappedDays,
+              createdAt: serverTimestamp()
+            });
+            tripsCount++;
+          }
+        }
+      }
+
+      showToast(`✅ Imported: ${placesCount} places, ${collectionsCount} collections`, 'ok');
+      return true;
+    } catch (err) {
+      console.error('Import error:', err);
+      showToast('❌ Failed to parse or import backup file');
+      return false;
+    }
+  }, [user, savedPlaces, collections, journals, trips, showToast]);
+
+  const clearAllUserData = useCallback(async () => {
+    if (!user) return;
+    try {
+      showToast('⏳ Clearing database...');
+      for (const p of savedPlaces) {
+        await deleteDoc(doc(db, 'users', user.uid, 'places', p.id));
+      }
+      for (const c of collections) {
+        await deleteDoc(doc(db, 'users', user.uid, 'collections', c.id));
+      }
+      for (const j of journals) {
+        await deleteDoc(doc(db, 'users', user.uid, 'journals', j.id));
+      }
+      for (const t of trips) {
+        await deleteDoc(doc(db, 'users', user.uid, 'trips', t.id));
+      }
+      showToast('🗑️ All database data cleared', 'ok');
+    } catch (err) {
+      console.error('Error clearing database:', err);
+      showToast('❌ Failed to clear database');
+    }
+  }, [user, savedPlaces, collections, journals, trips, showToast]);
 
   const switchTab = useCallback((panel) => setActiveTab(panel), []);
 
@@ -666,6 +856,9 @@ export function AppProvider({ children }) {
     trips, tripsLoading, addTrip, updateTrip, deleteTrip,
     flyTo, locateMe, isLocating, dropPin, navigateTo, copyCoords,
     initMarkers,
+    settingsModalOpen, openSettingsModal, closeSettingsModal,
+    defaultZoom, setDefaultZoom, defaultEmoji, setDefaultEmoji,
+    exportUserData, importUserData, clearAllUserData
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

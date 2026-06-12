@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { MapPin, Activity, Plane, BookOpen, BarChart3, PanelLeftClose, PanelLeftOpen, Search, LogOut } from 'lucide-react';
+import { MapPin, Activity, Plane, BookOpen, BarChart3, PanelLeftClose, PanelLeftOpen, Search, LogOut, Settings } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import PlacesPanel from './panels/PlacesPanel';
@@ -19,7 +19,7 @@ const TABS = [
 const PANELS = { places: PlacesPanel, timeline: TimelinePanel, trips: TripsPanel, journal: JournalPanel, stats: StatsPanel };
 
 export default function Sidebar() {
-  const { activeTab, switchTab, openPlaceModal, openAIModal: openSearchModal, isSidebarCollapsed: isCollapsed, setIsSidebarCollapsed: setIsCollapsed } = useApp();
+  const { activeTab, switchTab, openPlaceModal, openAIModal: openSearchModal, isSidebarCollapsed: isCollapsed, setIsSidebarCollapsed: setIsCollapsed, openSettingsModal } = useApp();
   const { user, signOut } = useAuth();
   const ActivePanel = PANELS[activeTab];
   
@@ -65,7 +65,16 @@ export default function Sidebar() {
         <Search size={18} className="text-t3 mr-3 shrink-0" />
         <span className="flex-1 text-sm text-t3 font-medium text-left truncate">Search the world...</span>
         {user && (
-          <img src={user.photoURL} className="w-7 h-7 rounded-full border border-b1 shrink-0 ml-3" alt="" referrerPolicy="no-referrer" />
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              openSettingsModal();
+            }} 
+            className="shrink-0 ml-3 rounded-full border border-b1 hover:scale-105 active:scale-95 transition-all duration-150 p-0 overflow-hidden cursor-pointer"
+            title="Settings"
+          >
+            <img src={user.photoURL} className="w-7 h-7 object-cover" alt="" referrerPolicy="no-referrer" />
+          </button>
         )}
       </div>
 
@@ -134,6 +143,13 @@ export default function Sidebar() {
             />
             <div className="min-w-0 flex-1 flex items-center justify-between">
               <div className="text-[13px] font-bold bg-gradient-to-br from-white to-zinc-500 bg-clip-text text-transparent transition-opacity hover:opacity-80">{user.displayName}</div>
+              <button 
+                onClick={openSettingsModal} 
+                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-elevated text-t3 hover:text-t1 transition-all duration-150 cursor-pointer"
+                title="Settings"
+              >
+                <Settings size={13} />
+              </button>
             </div>
           </div>
         )}

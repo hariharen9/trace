@@ -9,6 +9,7 @@ import CollectionModal from './components/CollectionModal'
 import JournalModal from './components/JournalModal'
 import TripModal from './components/TripModal'
 import SearchModal from './components/SearchModal'
+import SettingsModal from './components/SettingsModal'
 import ContextMenu from './components/ContextMenu'
 import ToastContainer from './components/ToastContainer'
 
@@ -51,6 +52,7 @@ function AppContent() {
       <JournalModal />
       <TripModal />
       <SearchModal />
+      <SettingsModal />
       <ContextMenu />
       <ToastContainer />
     </AppProvider>

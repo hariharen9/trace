@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { EMOJI_OPTIONS, CATEGORY_OPTIONS, VIBE_OPTIONS } from '../data';
 
 export default function PlaceModal() {
-  const { placeModalOpen, closePlaceModal, addPlace, updatePlace, ctxLatLng, placeToEdit, collections } = useApp();
+  const { placeModalOpen, closePlaceModal, addPlace, updatePlace, ctxLatLng, placeToEdit, collections, defaultEmoji } = useApp();
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
   const [addr, setAddr] = useState('');
@@ -29,7 +29,7 @@ export default function PlaceModal() {
         setNameError(false);
         setTimeout(() => nameRef.current?.focus(), 150);
       } else {
-        setName(''); setNote(''); setAddr(''); setEmoji('☕'); setCategory('Café'); setVibe(''); setCollectionId(''); setNameError(false);
+        setName(''); setNote(''); setAddr(''); setEmoji(defaultEmoji || '☕'); setCategory('Café'); setVibe(''); setCollectionId(''); setNameError(false);
         setTimeout(() => nameRef.current?.focus(), 150);
 
         // Reverse geocode if we have coordinates
